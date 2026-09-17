@@ -1,0 +1,3 @@
+{"case_id":"ticket-001","raw_output":"{\"category\":\"billing\"}","latency_ms":280,"input_tokens":100,"output_tokens":10}
+{"case_id":"ticket-002","raw_output":"{\"category\":\"account\"}","latency_ms":290,"input_tokens":100,"output_tokens":10}
+{"case_id":"ticket-003","raw_output":"{\"category\":\"technical\"}","latency_ms":300,"input_tokens":100,"output_tokens":10}

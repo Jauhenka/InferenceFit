@@ -1,0 +1,50 @@
+schema_version: "0.1"
+dataset:
+  path: dataset.jsonl
+candidates:
+  - id: cheap
+    provider: fixture
+    model: fixture-cheap
+    parameters:
+      fixture_path: fixtures/cheap.jsonl
+    pricing:
+      input_per_million: 0.20
+      output_per_million: 0.80
+  - id: strong
+    provider: fixture
+    model: fixture-strong
+    parameters:
+      fixture_path: fixtures/strong.jsonl
+    pricing:
+      input_per_million: 1.00
+      output_per_million: 3.00
+validators:
+  - id: response-schema
+    type: json_schema
+    routing_gate: true
+    config:
+      schema:
+        type: object
+        required: [category]
+        properties:
+          category: {type: string}
+  - id: category-correct
+    type: exact
+    target: /category
+    reference: /category
+constraints:
+  min_success_rate: 1.0
+  max_provider_error_rate: 0.0
+optimization:
+  objective: min_cost
+  cascade:
+    primary: cheap
+    fallbacks: [strong]
+execution:
+  repetitions: 1
+  concurrency: 4
+  timeout_ms: 30000
+  retry:
+    max_attempts: 3
+    initial_backoff_ms: 10
+    max_backoff_ms: 100

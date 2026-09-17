@@ -1,0 +1,3 @@
+{"id":"ticket-001","request":{"messages":[{"role":"user","content":"My card was charged twice."}]},"expected":{"category":"billing"},"metadata":{"language":"en"}}
+{"id":"ticket-002","request":{"messages":[{"role":"user","content":"Reset my password."}]},"expected":{"category":"account"},"metadata":{"language":"en"}}
+{"id":"ticket-003","request":{"messages":[{"role":"user","content":"The API returns 503."}]},"expected":{"category":"technical"},"metadata":{"language":"en"}}
