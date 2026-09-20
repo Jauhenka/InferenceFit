@@ -59,6 +59,15 @@ def test_credential_precedence_and_secret_safe_error(monkeypatch):
     assert "secret" not in str(caught.value).lower()
 
 
+def test_deepseek_credential_falls_back_to_provider_environment_variable(monkeypatch):
+    monkeypatch.delenv("INFERENCEFIT_CREDENTIAL_DEEPSEEK_MAIN", raising=False)
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-token")
+
+    resolved = EnvironmentCredentialResolver().resolve("deepseek-main", "deepseek")
+
+    assert resolved == "test-token"
+
+
 def test_percentile_and_deterministic_ranking():
     assert nearest_rank([1, 2, 3, 4], 0.95) == 4
     summaries = [

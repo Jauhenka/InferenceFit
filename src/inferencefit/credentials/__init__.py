@@ -7,7 +7,11 @@ import re
 
 from inferencefit.errors import MissingCredentialError
 
-_FALLBACKS = {"fireworks": "FIREWORKS_API_KEY", "openrouter": "OPENROUTER_API_KEY"}
+_FALLBACKS = {
+    "deepseek": "DEEPSEEK_API_KEY",
+    "fireworks": "FIREWORKS_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
+}
 
 
 class EnvironmentCredentialResolver:

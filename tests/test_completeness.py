@@ -197,3 +197,23 @@ async def test_openai_compatible_adapter_normalizes_response(respx_mock):
     assert result.input_tokens == 3
     assert result.output_tokens == 2
     assert route.calls[0].request.headers["authorization"] == "Bearer token"
+
+
+@pytest.mark.asyncio
+async def test_deepseek_preset_uses_documented_chat_endpoint(respx_mock):
+    route = respx_mock.post("https://api.deepseek.com/chat/completions").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "model": "deepseek-flash",
+                "choices": [{"message": {"content": '{"units":[]}'}}],
+                "usage": {"prompt_tokens": 7, "completion_tokens": 4},
+            },
+        )
+    )
+    candidate = CandidateSpec(id="deepseek", provider="deepseek", model="deepseek-flash")
+
+    result = await OpenAICompatibleProvider("test-token").complete(candidate, _case(), 0)
+
+    assert result.model == "deepseek-flash"
+    assert route.called

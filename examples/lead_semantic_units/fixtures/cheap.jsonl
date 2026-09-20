@@ -1,0 +1,32 @@
+{"case_id":"lead-en-001","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"customer support chatbot\"}]}","latency_ms":95,"input_tokens":112,"output_tokens":18}
+{"case_id":"lead-en-002","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"invoice OCR\"},{\"type\":\"budget\",\"value\":\"USD 12,000\"}]}","latency_ms":102,"input_tokens":118,"output_tokens":29}
+{"case_id":"lead-en-003","raw_output":"{\"units\":[{\"type\":\"timeline\",\"value\":\"Q2 2027\"}]}","latency_ms":91,"input_tokens":110,"output_tokens":16}
+{"case_id":"lead-en-004","raw_output":"{\"units\":[{\"type\":\"preference\",\"value\":\"Remote deployment\"},{\"type\":\"constraint\",\"value\":\"hosting must stay in the EU\"}]}","latency_ms":108,"input_tokens":121,"output_tokens":35}
+{"case_id":"lead-en-005","raw_output":"{\"units\":[{\"type\":\"contact\",\"value\":\"mira@example.test\"},{\"type\":\"need\",\"value\":\"warehouse forecasting\"}]}","latency_ms":105,"input_tokens":119,"output_tokens":32}
+{"case_id":"lead-en-006","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"SSO\"},{\"type\":\"exclusion\",\"value\":\"AcmeID\"}]}","latency_ms":98,"input_tokens":113,"output_tokens":26}
+{"case_id":"lead-en-007","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"demand planning or route optimization\"}]}","latency_ms":103,"input_tokens":117,"output_tokens":21}
+{"case_id":"lead-en-008","raw_output":"The lead contains no actionable units.","latency_ms":88,"input_tokens":108,"output_tokens":8}
+{"case_id":"lead-en-009","raw_output":"{\"units\":[]","latency_ms":90,"input_tokens":105,"output_tokens":5}
+{"case_id":"lead-en-010","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"fraud alerts\"},{\"type\":\"need\",\"value\":\"weekly reports\"},{\"type\":\"need\",\"value\":\"audit log\"}]}","latency_ms":110,"input_tokens":116,"output_tokens":39}
+{"case_id":"lead-en-011","raw_output":"{\"units\":[{\"type\":\"constraint\",\"value\":\"Budget approval is still pending\"},{\"type\":\"timeline\",\"value\":\"after approval\"}]}","latency_ms":109,"input_tokens":118,"output_tokens":34}
+{"case_id":"lead-en-012","raw_output":"{\"units\":[{\"type\":\"budget\",\"value\":\"$15k\"}]}","latency_ms":92,"input_tokens":106,"output_tokens":15}
+{"case_id":"lead-en-013","raw_output":"{\"units\":[{\"type\":\"timeline\",\"value\":\"end of March 2027\"}]}","latency_ms":94,"input_tokens":109,"output_tokens":19}
+{"case_id":"lead-en-014","raw_output":"{\"units\":[{\"type\":\"location\",\"value\":\"EU customers\"},{\"type\":\"exclusion\",\"value\":\"UK\"}]}","latency_ms":99,"input_tokens":112,"output_tokens":27}
+{"case_id":"lead-en-015","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"lead scoring\"}]}","latency_ms":97,"input_tokens":115,"output_tokens":17}
+{"case_id":"lead-en-016","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"CRM integration\"}]}","latency_ms":97,"input_tokens":116,"output_tokens":17}
+{"case_id":"lead-en-017","raw_output":"{\"units\":[{\"type\":\"preference\",\"value\":\"open-source stack\"},{\"type\":\"exclusion\",\"value\":\"proprietary database\"}]}","latency_ms":106,"input_tokens":117,"output_tokens":32}
+{"case_id":"lead-en-018","raw_output":"```json\n{\"units\":[{\"type\":\"constraint\",\"value\":\"500 requests per second\"}]}\n```","latency_ms":107,"input_tokens":116,"output_tokens":24}
+{"case_id":"lead-en-019","raw_output":"{\"units\":[{\"type\":\"contact\",\"value\":\"+1-202-555-0147\"},{\"type\":\"need\",\"value\":\"churn prediction\"}]}","latency_ms":104,"input_tokens":115,"output_tokens":31}
+{"case_id":"lead-en-020","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"dashboard\"},{\"type\":\"need\",\"value\":\"reports by email\"}]}","latency_ms":102,"input_tokens":116,"output_tokens":28}
+{"case_id":"lead-en-021","raw_output":"{\"units\":[{\"type\":\"location\",\"value\":\"Berlin\"},{\"type\":\"location\",\"value\":\"Warsaw\"},{\"type\":\"location\",\"value\":\"fully remote\"}]}","latency_ms":111,"input_tokens":115,"output_tokens":38}
+{"case_id":"lead-en-022","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"document search\"}]}","latency_ms":96,"input_tokens":114,"output_tokens":17}
+{"case_id":"lead-en-023","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"automated reconciliation\"}]}","latency_ms":98,"input_tokens":115,"output_tokens":19}
+{"case_id":"lead-en-024","raw_output":"No data","latency_ms":85,"input_tokens":103,"output_tokens":3}
+{"case_id":"lead-ru-001","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"поиск по договорам\"},{\"type\":\"budget\",\"value\":\"до 8000 евро\"}]}","latency_ms":112,"input_tokens":126,"output_tokens":34}
+{"case_id":"lead-ru-002","raw_output":"{\"units\":[{\"type\":\"timeline\",\"value\":\"в ноябре\"}]}","latency_ms":105,"input_tokens":123,"output_tokens":17}
+{"case_id":"lead-uk-001","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"автоматична звірка платежів\"}]}","latency_ms":101,"input_tokens":119,"output_tokens":22}
+{"case_id":"lead-uk-002","raw_output":"{\"units\":[{\"type\":\"preference\",\"value\":\"відкритий код\"},{\"type\":\"constraint\",\"value\":\"дані мають залишатися в Україні\"}]}","latency_ms":114,"input_tokens":127,"output_tokens":39}
+{"case_id":"lead-be-001","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"штотыднёвыя справаздачы\"}]}","latency_ms":103,"input_tokens":121,"output_tokens":22}
+{"case_id":"lead-be-002","raw_output":"Беларускі тэкст не падтрымліваецца.","latency_ms":97,"input_tokens":126,"output_tokens":9}
+{"case_id":"lead-pl-001","raw_output":"{\"units\":[{\"type\":\"need\",\"value\":\"wykrywania duplikatów ofert\"}]}","latency_ms":99,"input_tokens":117,"output_tokens":21}
+{"case_id":"lead-pl-002","raw_output":"{\"units\":[{\"type\":\"preference\",\"value\":\"Wdrożenie zdalne\"},{\"type\":\"exclusion\",\"value\":\"serwerów poza UE\"}]}","latency_ms":109,"input_tokens":124,"output_tokens":34}

@@ -1,0 +1,57 @@
+schema_version: "0.1"
+dataset:
+  path: dataset.jsonl
+candidates:
+  - id: deepseek-flash
+    provider: deepseek
+    model: deepseek-flash
+    credential_ref: deepseek-main
+    parameters:
+      temperature: 0
+      max_tokens: 300
+      response_format:
+        type: json_object
+      thinking:
+        type: disabled
+    pricing:
+      input_per_million: 0.15
+      output_per_million: 0.60
+validators:
+  - id: response-schema
+    type: json_schema
+    routing_gate: true
+    config:
+      schema:
+        type: object
+        required: [units]
+        additionalProperties: false
+        properties:
+          units:
+            type: array
+            items:
+              type: object
+              required: [type, value]
+              additionalProperties: false
+              properties:
+                type:
+                  type: string
+                  enum: [need, budget, timeline, location, constraint, contact, preference, exclusion]
+                value:
+                  type: string
+                  minLength: 1
+  - id: exact-units
+    type: exact
+    target: /units
+    reference: /units
+constraints:
+  max_provider_error_rate: 0.0
+optimization:
+  objective: max_quality
+execution:
+  repetitions: 1
+  concurrency: 2
+  timeout_ms: 60000
+  retry:
+    max_attempts: 3
+    initial_backoff_ms: 500
+    max_backoff_ms: 4000
