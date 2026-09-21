@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -14,11 +15,14 @@ def assert_import_is_outside_source_tree(package_file: Path, source_root: Path |
     """Reject imports that resolve into the checkout being verified."""
     if source_root is None:
         return
-    try:
-        package_file.resolve().relative_to(source_root.resolve())
-    except ValueError:
-        return
-    raise RuntimeError(f"inferencefit imported from source tree: {package_file}")
+    current = package_file.resolve()
+    source = source_root.resolve()
+    while True:
+        if current.samefile(source):
+            raise RuntimeError(f"inferencefit imported from source tree: {package_file}")
+        if current.parent == current:
+            return
+        current = current.parent
 
 
 def write_fixture_workload(directory: Path) -> Path:
@@ -58,6 +62,7 @@ def write_fixture_workload(directory: Path) -> Path:
                 "provider": "fixture",
                 "model": "local",
                 "parameters": {"fixture_path": "fixture.jsonl"},
+                "pricing": {"input_per_million": 1, "output_per_million": 1},
             }
         ],
         "validators": [
@@ -86,7 +91,36 @@ def write_fixture_workload(directory: Path) -> Path:
 
 def run_checked(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     """Run a command and retain its decoded output for contract checks."""
-    return subprocess.run(command, cwd=cwd, check=True, text=True, capture_output=True)
+    try:
+        return subprocess.run(command, cwd=cwd, check=True, text=True, capture_output=True)
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(
+            f"command failed with exit code {error.returncode}: {shlex.join(command)}; "
+            f"stdout={error.stdout!r}; stderr={error.stderr!r}"
+        ) from error
+
+
+def assert_complete_fixture_result(result_path: Path) -> None:
+    """Confirm the one result artifact is the expected two-case fixture run."""
+    try:
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"invalid result.json: {result_path}: {error}") from error
+    if result.get("schema_version") != "0.1" or result.get("status") != "completed":
+        raise RuntimeError("result.json is not a completed EvaluationSpec 0.1 result")
+    summaries = result.get("candidate_summaries")
+    if not isinstance(summaries, list) or len(summaries) != 1:
+        raise RuntimeError("result.json does not contain one fixture candidate summary")
+    summary = summaries[0]
+    if (
+        summary.get("id") != "fixture"
+        or summary.get("planned_count") != 2
+        or summary.get("provider_success_count") != 2
+        or summary.get("provider_error_count") != 0
+    ):
+        raise RuntimeError("result.json does not represent two successful fixture cases")
+    if result.get("recommendation") != "fixture":
+        raise RuntimeError("result.json recommendation is not fixture")
 
 
 def main(expected_version: str, source_root: Path | None) -> int:
@@ -118,6 +152,7 @@ def main(expected_version: str, source_root: Path | None) -> int:
         results = list((workdir / ".inferencefit" / "runs").glob("*/result.json"))
         if len(results) != 1:
             raise RuntimeError(f"expected exactly one complete result.json, found {len(results)}")
+        assert_complete_fixture_result(results[0])
     return 0
 
 

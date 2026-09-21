@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -15,6 +16,24 @@ def venv_python_path(environment: Path, os_name: str = os.name) -> Path:
     return environment / ("Scripts/python.exe" if os_name == "nt" else "bin/python")
 
 
+def venv_bin_path(environment: Path, os_name: str = os.name) -> Path:
+    return environment / ("Scripts" if os_name == "nt" else "bin")
+
+
+def run_checked(
+    command: list[str], cwd: Path, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            command, cwd=cwd, env=env, check=True, text=True, capture_output=True
+        )
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(
+            f"command failed with exit code {error.returncode}: {shlex.join(command)}; "
+            f"stdout={error.stdout!r}; stderr={error.stderr!r}"
+        ) from error
+
+
 def main(artifact: Path, expected_version: str, source_root: Path) -> int:
     artifact = artifact.resolve()
     source_root = source_root.resolve()
@@ -22,25 +41,20 @@ def main(artifact: Path, expected_version: str, source_root: Path) -> int:
     with tempfile.TemporaryDirectory(prefix="inferencefit-artifact-") as temporary:
         directory = Path(temporary)
         environment = directory / "venv"
-        venv.EnvBuilder(with_pip=True).create(environment)
+        venv.EnvBuilder(with_pip=True, system_site_packages=False).create(environment)
         interpreter = venv_python_path(environment)
-        subprocess.run(
-            [str(interpreter), "-m", "pip", "install", str(artifact)],
-            check=True,
-            text=True,
-            capture_output=True,
-        )
+        run_checked([str(interpreter), "-m", "pip", "install", str(artifact)], directory)
         copied_smoke = directory / "installed_distribution_smoke.py"
         shutil.copy2(smoke_script, copied_smoke)
         environment_variables = os.environ.copy()
         environment_variables.pop("PYTHONPATH", None)
-        subprocess.run(
+        environment_variables["PATH"] = os.pathsep.join(
+            filter(None, (str(venv_bin_path(environment)), environment_variables.get("PATH")))
+        )
+        run_checked(
             [str(interpreter), str(copied_smoke), expected_version, str(source_root)],
-            cwd=directory,
-            env=environment_variables,
-            check=True,
-            text=True,
-            capture_output=True,
+            directory,
+            environment_variables,
         )
     return 0
 
