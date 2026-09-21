@@ -24,9 +24,7 @@ def run_checked(
     command: list[str], cwd: Path, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     try:
-        return subprocess.run(
-            command, cwd=cwd, env=env, check=True, text=True, capture_output=True
-        )
+        return subprocess.run(command, cwd=cwd, env=env, check=True, text=True, capture_output=True)
     except subprocess.CalledProcessError as error:
         raise RuntimeError(
             f"command failed with exit code {error.returncode}: {shlex.join(command)}; "
