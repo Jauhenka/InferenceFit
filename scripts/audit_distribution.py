@@ -34,7 +34,22 @@ MAX_COMPRESSION_RATIO = 100.0
 SCAN_CHUNK_BYTES = 64 * 1024
 SCAN_OVERLAP_CHARS = 512
 FORBIDDEN_COMPONENTS = frozenset(
-    {".env", ".inferencefit", ".pytest_cache", ".venv", "__pycache__", "AGENTS.md", "venv"}
+    {
+        ".coverage",
+        ".env",
+        ".github",
+        ".inferencefit",
+        ".mypy_cache",
+        ".nox",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".superpowers",
+        ".tox",
+        ".venv",
+        "__pycache__",
+        "AGENTS.md",
+        "venv",
+    }
 )
 FORBIDDEN_SUFFIXES = (".pyc",)
 PLACEHOLDER_MARKERS = (

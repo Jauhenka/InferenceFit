@@ -1,8 +1,7 @@
-from pathlib import Path
 import tomllib
+from pathlib import Path
 
 import inferencefit
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -40,7 +39,9 @@ def test_classifiers_and_runtime_dependencies_are_scoped() -> None:
     assert "Operating System :: OS Independent" in classifiers
     runtime_dependencies = set(project["dependencies"])
     for package in ("pytest", "ruff", "build", "twine"):
-        assert not any(dependency.lower().startswith(package) for dependency in runtime_dependencies)
+        assert not any(
+            dependency.lower().startswith(package) for dependency in runtime_dependencies
+        )
 
 
 def test_gitignore_covers_release_local_state() -> None:
@@ -58,3 +59,17 @@ def test_gitignore_covers_release_local_state() -> None:
         "/.vs",
     }
     assert required <= normalized
+
+
+def test_sdist_excludes_internal_and_local_state() -> None:
+    excluded = set(load_pyproject()["tool"]["hatch"]["build"]["targets"]["sdist"]["exclude"])
+    required = {
+        "/.github",
+        "/.inferencefit",
+        "/.superpowers",
+        "/.venv",
+        "/AGENTS.md",
+        "/docs/superpowers",
+        "/dist",
+    }
+    assert required <= excluded

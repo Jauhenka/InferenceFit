@@ -98,6 +98,11 @@ def write_valid_distribution(tmp_path: Path) -> Path:
     [
         "pkg/.env",
         "pkg/.inferencefit/runs/run/result.json",
+        "pkg/.mypy_cache/3.14/cache.json",
+        "pkg/.nox/tests/pyvenv.cfg",
+        "pkg/.ruff_cache/content",
+        "pkg/.superpowers/sdd/progress.md",
+        "pkg/.tox/py311/pyvenv.cfg",
         "pkg/.venv/pyvenv.cfg",
         "pkg/.pytest_cache/v/cache/nodeids",
         "pkg/venv/pyvenv.cfg",
@@ -140,7 +145,8 @@ def test_windows_and_backslash_traversal_members_are_rejected(tmp_path: Path, me
 
 
 def test_secret_like_content_is_rejected() -> None:
-    findings = audit.scan_text("config.txt", "Bearer abcdefghijklmnopqrstuvwxyz123456")
+    credential = "Bearer " + "abcdefghijklmnopqrstuvwxyz" + "123456"
+    findings = audit.scan_text("config.txt", credential)
 
     assert findings
 
@@ -155,7 +161,8 @@ def test_documented_secret_placeholders_are_not_rejected(value: str) -> None:
 
 def test_provider_key_assignment_is_rejected_from_archive(tmp_path: Path) -> None:
     dist = write_valid_distribution(tmp_path)
-    write_wheel(dist / WHEEL_NAME, {"inferencefit/settings.py": "OPENAI_API_KEY=sk-secretvalue\n"})
+    credential = "OPENAI_API_KEY=" + "sk-" + "secretvalue\n"
+    write_wheel(dist / WHEEL_NAME, {"inferencefit/settings.py": credential})
 
     with pytest.raises(audit.AuditError, match="secret-like"):
         audit.audit_distribution(dist, expected_version="0.1.0")
@@ -163,9 +170,10 @@ def test_provider_key_assignment_is_rejected_from_archive(tmp_path: Path) -> Non
 
 def test_mixed_decode_secret_content_is_rejected_from_archive(tmp_path: Path) -> None:
     dist = write_valid_distribution(tmp_path)
+    credential = b"\xffOPENAI_API_KEY=" + b"real-" + b"secret-value-123456\n"
     write_wheel(
         dist / WHEEL_NAME,
-        {"inferencefit/settings.py": b"\xffOPENAI_API_KEY=real-secret-value-123456\n"},
+        {"inferencefit/settings.py": credential},
     )
 
     with pytest.raises(audit.AuditError, match="secret-like"):

@@ -58,12 +58,24 @@ packages = ["src/inferencefit"]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
+    "/.coverage",
+    "/.env*",
     "/.github",
     "/.inferencefit",
+    "/.mypy_cache",
+    "/.nox",
+    "/.pytest_cache",
+    "/.ruff_cache",
+    "/.superpowers",
+    "/.tox",
+    "/.venv",
     "/.vs",
     "/AGENTS.md",
+    "/build",
     "/docs/superpowers",
     "/dist",
+    "/htmlcov",
+    "/venv",
 ]
 
 [tool.pytest.ini_options]
