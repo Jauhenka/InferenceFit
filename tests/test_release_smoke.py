@@ -179,6 +179,51 @@ def test_smoke_main_rejects_source_tree_import_before_running_child(tmp_path, mo
         smoke.main("0.1.0", tmp_path / "repo")
 
 
+def test_smoke_main_rejects_host_console_script_from_retained_path(tmp_path, monkeypatch):
+    package_file = tmp_path / "site-packages" / "inferencefit" / "__init__.py"
+    package_file.parent.mkdir(parents=True)
+    package_file.touch()
+    isolated_python = (
+        tmp_path / "isolated" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    )
+    isolated_python.parent.mkdir(parents=True)
+    isolated_python.touch()
+    host_bin = tmp_path / "host-bin"
+    host_bin.mkdir()
+    host_script = host_bin / ("inferencefit.exe" if os.name == "nt" else "inferencefit")
+    host_script.touch()
+    host_script.chmod(0o755)
+
+    monkeypatch.setitem(
+        sys.modules, "inferencefit", SimpleNamespace(__version__="0.1.0", __file__=package_file)
+    )
+    monkeypatch.setattr(sys, "executable", str(isolated_python))
+    monkeypatch.setenv("PATH", str(host_bin))
+    monkeypatch.setattr(
+        smoke,
+        "run_checked",
+        lambda *_args, **_kwargs: pytest.fail("host console script must not run"),
+    )
+
+    with pytest.raises(RuntimeError, match="adjacent to the isolated interpreter"):
+        smoke.main("0.1.0", None)
+
+
+@pytest.mark.parametrize(
+    ("os_name", "python_relative", "script_name"),
+    [
+        ("nt", Path("Scripts/python.exe"), "inferencefit.exe"),
+        ("posix", Path("bin/python"), "inferencefit"),
+    ],
+)
+def test_console_script_path_is_adjacent_to_python(tmp_path, os_name, python_relative, script_name):
+    python_executable = tmp_path / python_relative
+
+    assert smoke.console_script_path(python_executable, os_name) == (
+        python_executable.parent / script_name
+    )
+
+
 def test_verify_main_uses_isolated_venv_and_prefixed_child_path(tmp_path, monkeypatch):
     artifact = tmp_path / "artifact.whl"
     artifact.touch()

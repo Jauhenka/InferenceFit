@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -23,6 +25,12 @@ def assert_import_is_outside_source_tree(package_file: Path, source_root: Path |
         if current.parent == current:
             return
         current = current.parent
+
+
+def console_script_path(python_executable: Path, os_name: str) -> Path:
+    """Return the platform-specific console script beside a Python executable."""
+    script_name = "inferencefit.exe" if os_name == "nt" else "inferencefit"
+    return python_executable.parent / script_name
 
 
 def write_fixture_workload(directory: Path) -> Path:
@@ -132,9 +140,17 @@ def main(expected_version: str, source_root: Path | None) -> int:
         )
     assert_import_is_outside_source_tree(Path(inferencefit.__file__), source_root)
 
-    executable = shutil.which("inferencefit")
-    if executable is None:
-        raise RuntimeError("inferencefit console script was not found")
+    expected_executable = console_script_path(Path(sys.executable), os.name)
+    discovered_executable = shutil.which("inferencefit")
+    if (
+        discovered_executable is None
+        or Path(discovered_executable).resolve() != expected_executable.resolve()
+    ):
+        raise RuntimeError(
+            "inferencefit console script is not adjacent to the isolated interpreter: "
+            f"expected {expected_executable}; PATH resolved to {discovered_executable!r}"
+        )
+    executable = str(expected_executable)
 
     with tempfile.TemporaryDirectory(prefix="inferencefit-smoke-") as temporary:
         workdir = Path(temporary)

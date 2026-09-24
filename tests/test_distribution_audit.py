@@ -153,7 +153,14 @@ def test_secret_like_content_is_rejected() -> None:
 
 @pytest.mark.parametrize(
     "value",
-    ["OPENAI_API_KEY=your-api-key-here", "OPENAI_API_KEY=dummy", "sk-example123456"],
+    [
+        "OPENAI_API_KEY=your-api-key-here",
+        "OPENAI_API_KEY=dummy",
+        "sk-example123456",
+        'DEEPSEEK_API_KEY = "your-api-key-here"',
+        "OPENROUTER_API_KEY='placeholder'",
+        'INFERENCEFIT_CREDENTIAL_ROUTER_TOKEN = "redacted"',
+    ],
 )
 def test_documented_secret_placeholders_are_not_rejected(value: str) -> None:
     assert audit.scan_text("docs/config.md", value) == []
@@ -162,6 +169,36 @@ def test_documented_secret_placeholders_are_not_rejected(value: str) -> None:
 def test_provider_key_assignment_is_rejected_from_archive(tmp_path: Path) -> None:
     dist = write_valid_distribution(tmp_path)
     credential = "OPENAI_API_KEY=" + "sk-" + "secretvalue\n"
+    write_wheel(dist / WHEEL_NAME, {"inferencefit/settings.py": credential})
+
+    with pytest.raises(audit.AuditError, match="secret-like"):
+        audit.audit_distribution(dist, expected_version="0.1.0")
+
+
+@pytest.mark.parametrize(
+    "credential",
+    [
+        'DEEPSEEK_API_KEY = "deepseek-real-secret-value-123456"\n',
+        "OPENROUTER_API_KEY='openrouter-real-secret-value-123456'\n",
+        'INFERENCEFIT_CREDENTIAL_ROUTER_TOKEN = "router-real-secret-value-123456"\n',
+    ],
+)
+def test_release_credential_assignment_is_rejected_from_archive(
+    tmp_path: Path, credential: str
+) -> None:
+    dist = write_valid_distribution(tmp_path)
+    write_wheel(dist / WHEEL_NAME, {"inferencefit/settings.py": credential})
+
+    with pytest.raises(audit.AuditError, match="secret-like"):
+        audit.audit_distribution(dist, expected_version="0.1.0")
+
+
+def test_release_credential_assignment_crossing_scan_chunk_is_rejected(
+    tmp_path: Path,
+) -> None:
+    dist = write_valid_distribution(tmp_path)
+    prefix = "x" * (audit.SCAN_CHUNK_BYTES - len("OPENROUTER_API") - 1) + "\n"
+    credential = prefix + 'OPENROUTER_API_KEY = "real-secret-value-123456"\n'
     write_wheel(dist / WHEEL_NAME, {"inferencefit/settings.py": credential})
 
     with pytest.raises(audit.AuditError, match="secret-like"):

@@ -72,6 +72,8 @@ exclude = [
     "/.vs",
     "/AGENTS.md",
     "/build",
+    "/docs/implementation-plan.md",
+    "/docs/release-0.1.0.md",
     "/docs/superpowers",
     "/dist",
     "/htmlcov",

@@ -73,19 +73,27 @@ Do this before creating the production tag.
 Production publishing is deliberately tag-triggered and requires manual approval. Perform these
 steps only after the release checklist says `READY_FOR_0.1.0`.
 
-1. Review and merge the complete release commit through the repository's normal process.
-2. Require green CI for that exact commit, including Python 3.11–3.13, Windows, lint/format, build,
-   Twine, archive audit, and installed wheel/sdist checks.
-3. Require a successful, recorded TestPyPI rehearsal of `inferencefit==0.1.0`.
+1. Push the reviewed release branch and merge it into `main` through the repository's normal
+   reviewed process. Record the exact resulting `main` commit SHA; a squash or merge commit is a
+   new candidate and must not inherit the branch commit's evidence.
+2. Require green CI for that exact `main` commit, including Python 3.11–3.13, Windows,
+   lint/format, build, Twine, archive audit, and installed wheel/sdist checks.
+3. Run the TestPyPI workflow on that same exact `main` commit and require a successful, recorded
+   rehearsal of `inferencefit==0.1.0`. If the merge changed the commit SHA, a branch rehearsal is
+   not sufficient.
 4. Confirm the PyPI Trusted Publisher and GitHub `pypi` environment match the table above, and
    confirm required reviewers/manual approval is active.
-5. Update local `main` without rewriting history, verify the release commit, create the annotated
-   tag, and push exactly that tag:
+5. Update local `main` without rewriting history, set `verifiedReleaseSha` to the exact SHA that
+   passed both CI and the TestPyPI rehearsal, refuse to continue if local `main` differs, then
+   create and push exactly the annotated tag:
 
    ```text
+   $verifiedReleaseSha = "<exact merged main SHA with green CI and successful TestPyPI>"
    git switch main
    git pull --ff-only
-   git status
+   if ((git rev-parse HEAD).Trim() -ne $verifiedReleaseSha) { throw "main is not the verified release commit" }
+   $workingTreeChanges = git status --porcelain
+   if ($workingTreeChanges) { throw "working tree is not clean" }
    git tag -a v0.1.0 -m "InferenceFit 0.1.0"
    git push origin v0.1.0
    ```

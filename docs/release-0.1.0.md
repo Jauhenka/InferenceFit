@@ -216,9 +216,9 @@ a release blocker; an HTTP 404 alone is evidence of no current project page, not
 
 ```text
 Checked at (UTC): 2026-09-24T08:32:47Z
-PyPI URL: https://pypi.org/project/inferencefit/
+PyPI URL: https://pypi.org/pypi/inferencefit/json
 PyPI HTTP/result: 404 / available at check time
-TestPyPI URL: https://test.pypi.org/project/inferencefit/
+TestPyPI URL: https://test.pypi.org/pypi/inferencefit/json
 TestPyPI HTTP/result: 404 / available at check time
 Conflict review: no current project page on either official JSON endpoint; a 404 is not a name
 reservation and must be rechecked immediately before publishing
@@ -261,7 +261,8 @@ Current release blockers:
 - the TestPyPI and PyPI Trusted Publisher relationships cannot be confirmed and TestPyPI has not
   been rehearsed; publication must remain blocked until the owner completes and verifies the
   account-side setup;
-- whole-branch review and its post-review evidence refresh remain to be completed in Task 8.
+- the independent whole-branch review found four Important release-engineering defects; fixes and
+  the required post-review evidence refresh are in progress and must pass before handoff.
 
 Any failed correctness, install, content, privacy, name, CI, or workflow-security gate also blocks
 the release until corrected. Account-side Trusted Publisher setup may remain a documented human
@@ -280,16 +281,19 @@ Decision date (UTC): 2026-09-24
 
 ## Final human actions
 
-Do not publish or tag yet. After Tasks 5–8 update this checklist to `READY_FOR_0.1.0`, the release
-owner must:
+Do not publish or tag yet. After every recorded blocker is cleared and this checklist says
+`READY_FOR_0.1.0`, the release owner must:
 
-1. review the final Git diff, checklist evidence, and passing GitHub Actions run;
+1. review the final Git diff and push `codex/release-0.1.0` for branch CI and normal review;
 2. configure and verify the `testpypi` and `pypi` GitHub environments and matching Trusted
    Publishers exactly as documented in `docs/releasing.md`;
-3. intentionally run and verify the TestPyPI workflow if the publisher is configured;
-4. merge or push the reviewed release commit through the repository's normal process;
-5. only then create and push the annotated `v0.1.0` tag that triggers the production workflow;
-6. manually approve the `pypi` environment after verifying that the workflow is publishing the
+3. merge the reviewed branch into `main` through the repository's normal process and record the
+   exact resulting commit SHA;
+4. require green CI for that exact merged `main` commit;
+5. intentionally run and verify the TestPyPI workflow on that same exact commit;
+6. recheck both official package-name JSON endpoints, then create and push `v0.1.0` only if local
+   `main` still equals the recorded CI-verified and TestPyPI-rehearsed SHA;
+7. manually approve the `pypi` environment after verifying that the workflow is publishing the
    already-verified immutable artifacts.
 
 Exact owner sequence after Task 8 review:
@@ -297,12 +301,19 @@ Exact owner sequence after Task 8 review:
 ```text
 git status
 git push -u origin codex/release-0.1.0
-# wait for the exact commit's CI and packaging jobs to pass; record the run URL above
+# wait for branch CI and review to pass
 # configure and verify the testpypi and pypi environments and Trusted Publishers per docs/releasing.md
-# run Publish to TestPyPI manually and verify inferencefit==0.1.0 from TestPyPI
-# merge only after every blocker above is cleared
+# merge the reviewed branch into main through the repository's normal process
+# record the exact resulting main commit SHA
+# require green CI for that exact merged commit
+# run Publish to TestPyPI on that exact commit and verify inferencefit==0.1.0
+$verifiedReleaseSha = "<exact merged main SHA with green CI and successful TestPyPI>"
 git switch main
 git pull --ff-only
+if ((git rev-parse HEAD).Trim() -ne $verifiedReleaseSha) { throw "main is not the verified release commit" }
+$workingTreeChanges = git status --porcelain
+if ($workingTreeChanges) { throw "working tree is not clean" }
+# recheck https://pypi.org/pypi/inferencefit/json and https://test.pypi.org/pypi/inferencefit/json
 git tag -a v0.1.0 -m "InferenceFit 0.1.0"
 git push origin v0.1.0
 ```

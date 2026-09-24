@@ -65,8 +65,9 @@ SECRET_PATTERNS = (
     re.compile(r"(?i)\bbearer\s+(?P<value>[a-z0-9._~+/=-]{20,})"),
     re.compile(r"\b(?P<value>sk-[A-Za-z0-9_-]{8,})"),
     re.compile(
-        r"(?im)\b(?:OPENAI|ANTHROPIC|FIREWORKS|AZURE|GOOGLE|AWS)_"
-        r"(?:API_)?(?:KEY|TOKEN|SECRET)\s*=\s*['\"]?(?P<value>[^\s'\"]+)"
+        r"(?im)\b(?:(?:OPENAI|ANTHROPIC|FIREWORKS|AZURE|GOOGLE|AWS|DEEPSEEK|OPENROUTER)_"
+        r"(?:API_)?(?:KEY|TOKEN|SECRET)|INFERENCEFIT_CREDENTIAL_[A-Z0-9_]+)"
+        r"\s*=\s*['\"]?(?P<value>[^\s'\"]+)"
     ),
 )
 SDIST_REQUIRED_MEMBERS = frozenset(

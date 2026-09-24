@@ -73,3 +73,12 @@ def test_sdist_excludes_internal_and_local_state() -> None:
         "/dist",
     }
     assert required <= excluded
+
+
+def test_sdist_excludes_internal_release_planning_documents() -> None:
+    excluded = set(load_pyproject()["tool"]["hatch"]["build"]["targets"]["sdist"]["exclude"])
+    required = {
+        "/docs/implementation-plan.md",
+        "/docs/release-0.1.0.md",
+    }
+    assert required <= excluded
