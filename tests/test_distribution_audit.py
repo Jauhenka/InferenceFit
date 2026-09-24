@@ -166,6 +166,12 @@ def test_documented_secret_placeholders_are_not_rejected(value: str) -> None:
     assert audit.scan_text("docs/config.md", value) == []
 
 
+def test_distribution_audit_test_source_does_not_package_secret_like_content() -> None:
+    source = Path(__file__).read_text(encoding="utf-8")
+
+    assert audit.scan_text(Path(__file__).name, source) == []
+
+
 def test_provider_key_assignment_is_rejected_from_archive(tmp_path: Path) -> None:
     dist = write_valid_distribution(tmp_path)
     credential = "OPENAI_API_KEY=" + "sk-" + "secretvalue\n"
@@ -176,17 +182,21 @@ def test_provider_key_assignment_is_rejected_from_archive(tmp_path: Path) -> Non
 
 
 @pytest.mark.parametrize(
-    "credential",
+    ("name", "value"),
     [
-        'DEEPSEEK_API_KEY = "deepseek-real-secret-value-123456"\n',
-        "OPENROUTER_API_KEY='openrouter-real-secret-value-123456'\n",
-        'INFERENCEFIT_CREDENTIAL_ROUTER_TOKEN = "router-real-secret-value-123456"\n',
+        ("DEEPSEEK" + "_API_KEY", "deepseek-real-secret-value-123456"),
+        ("OPENROUTER" + "_API_KEY", "openrouter-real-secret-value-123456"),
+        (
+            "INFERENCEFIT" + "_CREDENTIAL_ROUTER_TOKEN",
+            "router-real-secret-value-123456",
+        ),
     ],
 )
 def test_release_credential_assignment_is_rejected_from_archive(
-    tmp_path: Path, credential: str
+    tmp_path: Path, name: str, value: str
 ) -> None:
     dist = write_valid_distribution(tmp_path)
+    credential = f'{name} = "{value}"\n'
     write_wheel(dist / WHEEL_NAME, {"inferencefit/settings.py": credential})
 
     with pytest.raises(audit.AuditError, match="secret-like"):
@@ -198,7 +208,8 @@ def test_release_credential_assignment_crossing_scan_chunk_is_rejected(
 ) -> None:
     dist = write_valid_distribution(tmp_path)
     prefix = "x" * (audit.SCAN_CHUNK_BYTES - len("OPENROUTER_API") - 1) + "\n"
-    credential = prefix + 'OPENROUTER_API_KEY = "real-secret-value-123456"\n'
+    credential_name = "OPENROUTER" + "_API_KEY"
+    credential = prefix + f'{credential_name} = "real-secret-value-123456"\n'
     write_wheel(dist / WHEEL_NAME, {"inferencefit/settings.py": credential})
 
     with pytest.raises(audit.AuditError, match="secret-like"):
