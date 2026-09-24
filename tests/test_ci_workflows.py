@@ -17,6 +17,8 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "ci.yml"
+RELEASE_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "release.yml"
+TESTPYPI_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "testpypi.yml"
 
 EXPECTED_MATRIX = {
     ("ubuntu-latest", "3.11"),
@@ -31,6 +33,12 @@ CURRENT_ACTION_MAJORS = {
     "actions/upload-artifact": "v7",
 }
 
+CURRENT_PUBLISH_ACTION_MAJORS = {
+    **CURRENT_ACTION_MAJORS,
+    "actions/download-artifact": "v8",
+}
+PYPA_PUBLISH_ACTION = "pypa/gh-action-pypi-publish@release/v1"
+
 FORBIDDEN_WORKFLOW_REFERENCES = (
     "secrets.",
     "inferencefit_live_tests",
@@ -41,9 +49,9 @@ FORBIDDEN_WORKFLOW_REFERENCES = (
 )
 
 
-def load_workflow() -> dict[str, Any]:
-    assert WORKFLOW_PATH.is_file(), f"missing workflow: {WORKFLOW_PATH}"
-    loaded = yaml.load(WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+def load_workflow(path: Path = WORKFLOW_PATH) -> dict[str, Any]:
+    assert path.is_file(), f"missing workflow: {path}"
+    loaded = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
     assert isinstance(loaded, dict), "workflow root must be a mapping"
     return loaded
 
@@ -268,3 +276,153 @@ def test_workflows_use_current_official_action_majors() -> None:
         assert all(reference == f"{action}@{major}" for reference in pinned), (
             f"{action} must be pinned to {major}"
         )
+
+
+def publishing_workflows() -> Iterator[tuple[Path, dict[str, Any]]]:
+    for path in (RELEASE_WORKFLOW_PATH, TESTPYPI_WORKFLOW_PATH):
+        yield path, load_workflow(path)
+
+
+def test_release_workflow_triggers_only_for_version_tags() -> None:
+    workflow = load_workflow(RELEASE_WORKFLOW_PATH)
+    assert workflow["on"] == {"push": {"tags": ["v*"]}}
+
+
+def test_testpypi_workflow_is_manual_only() -> None:
+    workflow = load_workflow(TESTPYPI_WORKFLOW_PATH)
+    assert workflow["on"] == {"workflow_dispatch": ""}
+
+
+def test_publishing_workflows_separate_build_from_publish() -> None:
+    for path, workflow in publishing_workflows():
+        assert set(workflow["jobs"]) == {"build", "publish"}, path
+        assert workflow["permissions"] == {}, path
+        build = job(workflow, "build")
+        publish = job(workflow, "publish")
+        assert build["permissions"] == {"contents": "read"}, path
+        assert publish["needs"] == "build", path
+        assert publish["permissions"] == {"id-token": "write"}, path
+
+
+def test_release_build_derives_and_confirms_tag_version() -> None:
+    workflow = load_workflow(RELEASE_WORKFLOW_PATH)
+    commands = step_commands(job(workflow, "build"))
+    joined = "\n".join(commands)
+    assert "GITHUB_REF_NAME#v" in joined
+    assert "RELEASE_VERSION" in joined
+    assert "inferencefit.__version__" in joined
+    assert "['project']['version']" not in joined
+    assert "0.1.0" not in joined, "tag release build must not hard-code the package version"
+    assert 'audit_distribution.py dist --expected-version "$RELEASE_VERSION"' in joined
+    assert joined.count('"$RELEASE_VERSION" .') == 2
+
+
+def test_testpypi_build_confirms_fixed_release_candidate_version() -> None:
+    workflow = load_workflow(TESTPYPI_WORKFLOW_PATH)
+    joined = "\n".join(step_commands(job(workflow, "build")))
+    assert "RELEASE_VERSION=0.1.0" in joined
+    assert "inferencefit.__version__" in joined
+    assert "['project']['version']" not in joined
+
+
+def test_publishing_builds_run_all_release_gates_in_order() -> None:
+    for path, workflow in publishing_workflows():
+        build = job(workflow, "build")
+        commands = [re.sub(r"\s+", " ", command).strip() for command in step_commands(build)]
+        joined = "\n".join(commands)
+        build_commands = [command for command in commands if command == "python -m build"]
+        assert build_commands == ["python -m build"], path
+
+        required_fragments = [
+            "rm -rf dist build",
+            "python -m build",
+            "python -m twine check dist/*",
+            "scripts/audit_distribution.py dist --expected-version",
+            "scripts/verify_artifact_install.py",
+        ]
+        indices = [
+            next(index for index, command in enumerate(commands) if fragment in command)
+            for fragment in required_fragments
+        ]
+        assert indices == sorted(indices), path
+        assert joined.count("scripts/verify_artifact_install.py") == 2, path
+        assert ".whl" in joined and ".tar.gz" in joined, path
+        assert "--artifact" not in joined and "--source-root" not in joined, path
+
+        upload_steps = [
+            step
+            for step in build["steps"]
+            if str(step.get("uses", "")).startswith("actions/upload-artifact@")
+        ]
+        assert len(upload_steps) == 1, path
+        upload = upload_steps[0]
+        assert upload["with"] == {
+            "name": "python-distributions",
+            "path": "dist/*",
+            "if-no-files-found": "error",
+        }, path
+        assert build["steps"].index(upload) > max(
+            index
+            for index, step in enumerate(build["steps"])
+            if "scripts/verify_artifact_install.py" in step.get("run", "")
+        ), path
+
+
+def test_publishing_jobs_only_download_and_publish_verified_artifact() -> None:
+    forbidden_actions = ("actions/checkout@", "actions/setup-python@", "actions/upload-artifact@")
+    forbidden_commands = ("pip install", "python -m build", "audit_distribution", "verify_artifact")
+    expected_environments = {
+        RELEASE_WORKFLOW_PATH: "pypi",
+        TESTPYPI_WORKFLOW_PATH: "testpypi",
+    }
+
+    for path, workflow in publishing_workflows():
+        publish = job(workflow, "publish")
+        assert publish["environment"] == expected_environments[path]
+        assert len(publish["steps"]) == 2, path
+        references = action_references(publish)
+        assert references == ["actions/download-artifact@v8", PYPA_PUBLISH_ACTION], path
+        assert not any(reference.startswith(forbidden_actions) for reference in references), path
+        assert not any(
+            fragment in command
+            for command in step_commands(publish)
+            for fragment in forbidden_commands
+        ), path
+
+        download = publish["steps"][0]
+        assert download["with"] == {"name": "python-distributions", "path": "dist"}, path
+
+
+def test_testpypi_publish_uses_test_repository_and_pypi_uses_default() -> None:
+    release_publish = job(load_workflow(RELEASE_WORKFLOW_PATH), "publish")
+    test_publish = job(load_workflow(TESTPYPI_WORKFLOW_PATH), "publish")
+    release_action = release_publish["steps"][1]
+    test_action = test_publish["steps"][1]
+    assert release_action["uses"] == PYPA_PUBLISH_ACTION
+    assert "with" not in release_action
+    assert test_action["uses"] == PYPA_PUBLISH_ACTION
+    assert test_action["with"] == {"repository-url": "https://test.pypi.org/legacy/"}
+
+
+def test_publishing_workflows_use_current_official_actions() -> None:
+    for path, workflow in publishing_workflows():
+        references = action_references(workflow)
+        for action, major in CURRENT_PUBLISH_ACTION_MAJORS.items():
+            pinned = [reference for reference in references if reference.startswith(f"{action}@")]
+            assert pinned, f"{path} must use {action}"
+            assert all(reference == f"{action}@{major}" for reference in pinned), (
+                f"{path}: {action} must be pinned to {major}"
+            )
+        assert references.count(PYPA_PUBLISH_ACTION) == 1, path
+
+
+def test_publishing_workflows_do_not_reference_long_lived_credentials() -> None:
+    forbidden = ("secrets.", "token", "password", "api_key", "apikey", "credential")
+    for path, workflow in publishing_workflows():
+        for value in strings(workflow):
+            lowered = value.lower()
+            if lowered == "id-token":
+                continue
+            assert not any(fragment in lowered for fragment in forbidden), (
+                f"{path}: long-lived credential reference found: {value}"
+            )
