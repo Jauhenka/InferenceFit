@@ -45,8 +45,8 @@ Final commands and evidence:
 
 ```text
 python -m pytest -q
-Result: 169 passed, 2 warnings in 1.80s on Python 3.14.0
-Python 3.11 result: 169 passed, 1 warning in 1.69s
+Result: 169 passed, 2 warnings in 1.63s on Python 3.14.0
+Python 3.11 result: 169 passed, 1 warning in 1.93s
 Warnings: Starlette deprecates httpx with starlette.testclient; anyio.abc.BlockingPortal alias is
 deprecated in favor of anyio.from_thread.BlockingPortal. Both originate in installed
 FastAPI/Starlette dependencies during tests/test_engine.py::test_daemon_endpoints_use_shared_core.
@@ -64,7 +64,7 @@ Result: 61 files already formatted
 - [x] After `CHANGELOG.md` was added, an isolated Task 4 build passed the distribution-content
   audit with 39 wheel members and 73 sdist members.
 - [x] Removed only the validated repository-local `dist/` and `build/` directories and rebuilt
-  from artifact-input commit `3e9e4c8a09e99704ca9261cfd14186f027fd6fe6`. The subsequently
+  from artifact-input commit `c9e36b8fcdf6cebc782fee0c74625da2ea03f808`. The subsequently
   updated checklist is excluded from the sdist, eliminating self-referential artifact drift.
 - [x] Twine checks passed on both final artifacts.
 - [x] Recorded exact final artifact names, byte sizes, member counts, and SHA-256 digests.
@@ -75,7 +75,7 @@ evidence because Tasks 5–8 may still change the candidate):
 | Artifact | Observed size | Final size |
 | --- | ---: | ---: |
 | `inferencefit-0.1.0-py3-none-any.whl` | 38,274 bytes | 38,274 bytes |
-| `inferencefit-0.1.0.tar.gz` | 66,046 bytes | 67,146 bytes |
+| `inferencefit-0.1.0.tar.gz` | 66,046 bytes | 67,207 bytes |
 
 Final commands and evidence:
 
@@ -95,8 +95,8 @@ Result: PASSED for both artifacts
 
 Wheel: 38,274 bytes, 39 members
 SHA-256: e90e3cbcc6205982731ebe64be7a479f54264aeb7ae6b2bd4db6a02c617cbaca
-Sdist: 67,146 bytes, 73 members
-SHA-256: 3141110641af86c9366a80bca7f3830352aae412d41febf5459faa8f6533584d
+Sdist: 67,207 bytes, 73 members
+SHA-256: 968e660a05dd054b36c650174753189d5d9cbfe1f0ced04145404c02bd32534a
 Planning/checklist members: 0 (`docs/implementation-plan.md` and
 `docs/release-0.1.0.md` are excluded)
 ```
@@ -138,14 +138,14 @@ inferencefit validate examples/basic/eval.yaml
 Result: Valid EvaluationSpec 0.1, 2 candidates
 
 inferencefit benchmark examples/basic/eval.yaml
-Result: run 20260924T085543Z-ecfe52; 6 provider successes, 0 failures;
+Result: run 20260924T222846Z-cb0cc1; 6 provider successes, 0 failures;
 recommendation cascade:cheap->strong
 
 inferencefit validate examples/lead_semantic_units/eval.fixture.yaml
 Result: Valid EvaluationSpec 0.1, 2 candidates
 
 inferencefit benchmark examples/lead_semantic_units/eval.fixture.yaml
-Result: run 20260924T085544Z-0a1bfc; 48 provider successes, 0 failures;
+Result: run 20260924T222848Z-6ea272; 48 provider successes, 0 failures;
 recommendation cascade:cheap-fixture->strong-fixture
 ```
 
@@ -227,7 +227,7 @@ a release blocker; an HTTP 404 alone is evidence of no current project page, not
 - [x] Checked `inferencefit` on TestPyPI.
 
 ```text
-Checked at (UTC): 2026-09-24T22:21:18Z
+Checked at (UTC): 2026-09-24T22:29:09Z
 PyPI URL: https://pypi.org/pypi/inferencefit/json
 PyPI HTTP/result: 404 / available at check time
 TestPyPI URL: https://test.pypi.org/pypi/inferencefit/json
