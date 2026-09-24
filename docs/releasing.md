@@ -41,15 +41,16 @@ pending publisher grants access.
 
 ## TestPyPI rehearsal
 
-Do this before creating the production tag.
+Do this once, after the reviewed release branch has been merged into `main` and before creating
+the production tag. TestPyPI distribution files are immutable, so do not upload `0.1.0` from a
+pre-merge commit and then attempt to replace it from a different merged commit.
 
-1. Confirm the release branch contains the reviewed `.github/workflows/testpypi.yml` and that CI
-   is green for the exact commit to be rehearsed.
+1. Confirm `main` contains the reviewed `.github/workflows/testpypi.yml`. Record the exact current
+   `main` commit SHA and require green CI for that same commit.
 2. Confirm the TestPyPI pending publisher and the GitHub `testpypi` environment match the table
    above.
-3. In GitHub, open **Actions → Publish to TestPyPI → Run workflow** and select the reviewed release
-   branch whose HEAD is the exact commit being rehearsed. This workflow is manual; do not add a
-   push or scheduled trigger.
+3. In GitHub, open **Actions → Publish to TestPyPI → Run workflow** and select `main` while its HEAD
+   is the exact recorded commit. This workflow is manual; do not add a push or scheduled trigger.
 4. Wait for its build, metadata check, distribution audit, wheel/sdist install checks, immutable
    artifact handoff, and publish job to succeed.
 5. Verify the uploaded package in a clean virtual environment. TestPyPI is the package source;
@@ -64,9 +65,9 @@ Do this before creating the production tag.
 
    On POSIX, use `.venv-testpypi/bin/python` and `.venv-testpypi/bin/inferencefit` instead. Verify
    that the reported version is exactly `0.1.0` and that the CLI help exits successfully.
-6. Record the workflow run URL, conclusion, installed version, and CLI result in
-   `docs/release-0.1.0.md`. A missing publisher, failed upload, ambiguous package ownership, or
-   failed install is a release blocker.
+6. Record the exact commit SHA, workflow run URL, conclusion, installed version, and CLI result in
+   `docs/release-0.1.0.md`. A changed `main` SHA, missing publisher, failed upload, ambiguous
+   package ownership, or failed install is a release blocker.
 
 ## Production release
 

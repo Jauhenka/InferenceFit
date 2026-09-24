@@ -30,8 +30,12 @@ Evidence: `pyproject.toml`, `src/inferencefit/__init__.py`,
   distribution-audit hardening.
 - [x] Focused metadata and distribution-audit suite: `46 passed`.
 - [x] Ruff check and format check passed for the Task 3 audit implementation and tests.
-- [x] The exact release candidate passed the final full suite: `157 passed, 2 warnings` on
+- [x] The exact release candidate passed the final full suite: `169 passed, 2 warnings` on
   2026-09-24 under Python 3.14.0.
+- [x] The complete suite also passed under supported Python 3.11.9 on Windows:
+  `169 passed, 1 warning`.
+- [x] Independent whole-branch review completed; all four Important findings were fixed with
+  regression coverage and the complete local gate set was rerun afterward.
 - [x] Repository-wide Ruff check and format check passed against the exact release candidate;
   Ruff reported `61 files already formatted`.
 - [x] The final output retained the two known third-party FastAPI/Starlette deprecation warnings,
@@ -41,7 +45,8 @@ Final commands and evidence:
 
 ```text
 python -m pytest -q
-Result: 157 passed, 2 warnings in 2.21s
+Result: 169 passed, 2 warnings in 1.80s on Python 3.14.0
+Python 3.11 result: 169 passed, 1 warning in 1.69s
 Warnings: Starlette deprecates httpx with starlette.testclient; anyio.abc.BlockingPortal alias is
 deprecated in favor of anyio.from_thread.BlockingPortal. Both originate in installed
 FastAPI/Starlette dependencies during tests/test_engine.py::test_daemon_endpoints_use_shared_core.
@@ -59,7 +64,8 @@ Result: 61 files already formatted
 - [x] After `CHANGELOG.md` was added, an isolated Task 4 build passed the distribution-content
   audit with 39 wheel members and 73 sdist members.
 - [x] Removed only the validated repository-local `dist/` and `build/` directories and rebuilt
-  from candidate commit `b4c600aa8b2bb2db108709ec313c41f068d28a9c`.
+  from artifact-input commit `3e9e4c8a09e99704ca9261cfd14186f027fd6fe6`. The subsequently
+  updated checklist is excluded from the sdist, eliminating self-referential artifact drift.
 - [x] Twine checks passed on both final artifacts.
 - [x] Recorded exact final artifact names, byte sizes, member counts, and SHA-256 digests.
 
@@ -69,7 +75,7 @@ evidence because Tasks 5–8 may still change the candidate):
 | Artifact | Observed size | Final size |
 | --- | ---: | ---: |
 | `inferencefit-0.1.0-py3-none-any.whl` | 38,274 bytes | 38,274 bytes |
-| `inferencefit-0.1.0.tar.gz` | 66,046 bytes | 72,174 bytes |
+| `inferencefit-0.1.0.tar.gz` | 66,046 bytes | 67,146 bytes |
 
 Final commands and evidence:
 
@@ -89,8 +95,10 @@ Result: PASSED for both artifacts
 
 Wheel: 38,274 bytes, 39 members
 SHA-256: e90e3cbcc6205982731ebe64be7a479f54264aeb7ae6b2bd4db6a02c617cbaca
-Sdist: 72,174 bytes, 75 members
-SHA-256: 1dba0b8067f9ecf376334ea54b0432fe46f64dc466223ac7d3cc14a3ff35b3da
+Sdist: 67,146 bytes, 73 members
+SHA-256: 3141110641af86c9366a80bca7f3830352aae412d41febf5459faa8f6533584d
+Planning/checklist members: 0 (`docs/implementation-plan.md` and
+`docs/release-0.1.0.md` are excluded)
 ```
 
 ## Installed wheel and sdist
@@ -130,14 +138,14 @@ inferencefit validate examples/basic/eval.yaml
 Result: Valid EvaluationSpec 0.1, 2 candidates
 
 inferencefit benchmark examples/basic/eval.yaml
-Result: run 20260924T082529Z-c07bf7; 6 provider successes, 0 failures;
+Result: run 20260924T085543Z-ecfe52; 6 provider successes, 0 failures;
 recommendation cascade:cheap->strong
 
 inferencefit validate examples/lead_semantic_units/eval.fixture.yaml
 Result: Valid EvaluationSpec 0.1, 2 candidates
 
 inferencefit benchmark examples/lead_semantic_units/eval.fixture.yaml
-Result: run 20260924T082530Z-720f3d; 48 provider successes, 0 failures;
+Result: run 20260924T085544Z-0a1bfc; 48 provider successes, 0 failures;
 recommendation cascade:cheap-fixture->strong-fixture
 ```
 
@@ -167,7 +175,7 @@ successful live validation.
 python scripts/audit_distribution.py dist --expected-version 0.1.0
 Result: PASS
 Wheel member count: 39
-Sdist member count: 75
+Sdist member count: 73
 Privacy-review notes: PASS for all 80 tracked HEAD blobs and every archive member. No forbidden
 tracked paths or artifact members were found. Two unique non-empty provider credential values
 were compared byte-for-byte with tracked and packaged content; match count was zero and no value
@@ -183,6 +191,7 @@ found.
 - [x] Declared Python support and classifiers cover Python 3.11, 3.12, and 3.13.
 - [x] The local development interpreter used for the prior task evidence currently reports
   Python 3.14.0 on Windows; this is supplemental evidence, not a declared 3.14 support claim.
+- [x] The full suite passed locally on supported Python 3.11.9 on Windows.
 - [ ] Verify Ubuntu on Python 3.11, 3.12, and 3.13 in GitHub Actions.
 - [ ] Verify Windows on Python 3.13 in GitHub Actions.
 - [x] Structural workflow tests verified that the packaging job builds once, checks and audits
@@ -193,7 +202,7 @@ found.
 Evidence fields:
 
 ```text
-Local interpreter: Python 3.14.0 / Windows NT 10.0.26200.0
+Local interpreters: Python 3.14.0 and Python 3.11.9 / Windows NT 10.0.26200.0
 CI workflow: implemented and structurally verified; exact candidate not pushed, so no run exists
 Ubuntu 3.11: PENDING
 Ubuntu 3.12: PENDING
@@ -202,8 +211,11 @@ Windows 3.13: PENDING
 Packaging job: 23 workflow contract tests passed; runtime GitHub Actions evidence pending
 Run URL: NONE -- public API returned zero workflow runs and local commit is absent from origin
 
-Local interpreter discovery (`py -0p`) found Python 3.14 and 3.9 only. Python 3.11, 3.12, and
-3.13 were not locally available, so they are not claimed as passed.
+The installed user-profile Python 3.11.9 runtime was accessed in the approved elevated
+verification session through a disposable virtual environment; that environment reported
+`inferencefit 0.1.0`, `pytest 9.1.1`, and the complete passing result above. Ordinary sandboxed
+`py -0p` discovery lists Python 3.14 and 3.9 only. Python 3.12 and 3.13 were not available, so they
+are not claimed as passed.
 ```
 
 ## PyPI and TestPyPI name checks
@@ -215,7 +227,7 @@ a release blocker; an HTTP 404 alone is evidence of no current project page, not
 - [x] Checked `inferencefit` on TestPyPI.
 
 ```text
-Checked at (UTC): 2026-09-24T08:32:47Z
+Checked at (UTC): 2026-09-24T22:21:18Z
 PyPI URL: https://pypi.org/pypi/inferencefit/json
 PyPI HTTP/result: 404 / available at check time
 TestPyPI URL: https://test.pypi.org/pypi/inferencefit/json
@@ -251,6 +263,11 @@ Production upload: NOT PERFORMED
 
 ## Blockers
 
+The reviewed source, package metadata, workflows, artifacts, installed smoke checks, offline
+examples, privacy scan, and package-name status have no remaining local blocker. The independent
+whole-branch review's four Important findings were fixed with regression coverage, and every
+local gate was rerun.
+
 Current release blockers:
 
 - the exact candidate commit is not on `origin`, the public repository has no workflow runs, and
@@ -260,9 +277,7 @@ Current release blockers:
   reviewers/manual approval are not configured;
 - the TestPyPI and PyPI Trusted Publisher relationships cannot be confirmed and TestPyPI has not
   been rehearsed; publication must remain blocked until the owner completes and verifies the
-  account-side setup;
-- the independent whole-branch review found four Important release-engineering defects; fixes and
-  the required post-review evidence refresh are in progress and must pass before handoff.
+  account-side setup.
 
 Any failed correctness, install, content, privacy, name, CI, or workflow-security gate also blocks
 the release until corrected. Account-side Trusted Publisher setup may remain a documented human
