@@ -30,22 +30,27 @@ Evidence: `pyproject.toml`, `src/inferencefit/__init__.py`,
   distribution-audit hardening.
 - [x] Focused metadata and distribution-audit suite: `46 passed`.
 - [x] Ruff check and format check passed for the Task 3 audit implementation and tests.
-- [ ] Run the final full suite against the exact release candidate.
-- [ ] Run repository-wide Ruff check and format check against the exact release candidate.
-- [ ] Record the two known third-party FastAPI/Starlette deprecation warnings, or replace this
-  note if final output differs.
+- [x] The exact release candidate passed the final full suite: `157 passed, 2 warnings` on
+  2026-09-24 under Python 3.14.0.
+- [x] Repository-wide Ruff check and format check passed against the exact release candidate;
+  Ruff reported `61 files already formatted`.
+- [x] The final output retained the two known third-party FastAPI/Starlette deprecation warnings,
+  recorded below.
 
 Final commands and evidence:
 
 ```text
 python -m pytest -q
-Result: PENDING
+Result: 157 passed, 2 warnings in 2.21s
+Warnings: Starlette deprecates httpx with starlette.testclient; anyio.abc.BlockingPortal alias is
+deprecated in favor of anyio.from_thread.BlockingPortal. Both originate in installed
+FastAPI/Starlette dependencies during tests/test_engine.py::test_daemon_endpoints_use_shared_core.
 
 python -m ruff check .
-Result: PENDING
+Result: All checks passed!
 
 python -m ruff format --check .
-Result: PENDING
+Result: 61 files already formatted
 ```
 
 ## Clean build and artifacts
@@ -53,17 +58,18 @@ Result: PENDING
 - [x] An isolated provisional build produced one wheel and one sdist with Hatchling 1.32.4.
 - [x] After `CHANGELOG.md` was added, an isolated Task 4 build passed the distribution-content
   audit with 39 wheel members and 73 sdist members.
-- [ ] Remove stale `dist/` and `build/` directories and rebuild from the exact release candidate.
-- [ ] Run Twine checks on both final artifacts.
-- [ ] Record exact final artifact names and byte sizes from the fresh build.
+- [x] Removed only the validated repository-local `dist/` and `build/` directories and rebuilt
+  from candidate commit `b4c600aa8b2bb2db108709ec313c41f068d28a9c`.
+- [x] Twine checks passed on both final artifacts.
+- [x] Recorded exact final artifact names, byte sizes, member counts, and SHA-256 digests.
 
 Observed isolated Task 4 artifacts on 2026-09-21 (audited successfully, but not final release
 evidence because Tasks 5–8 may still change the candidate):
 
 | Artifact | Observed size | Final size |
 | --- | ---: | ---: |
-| `inferencefit-0.1.0-py3-none-any.whl` | 38,274 bytes | PENDING |
-| `inferencefit-0.1.0.tar.gz` | 66,046 bytes | PENDING |
+| `inferencefit-0.1.0-py3-none-any.whl` | 38,274 bytes | 38,274 bytes |
+| `inferencefit-0.1.0.tar.gz` | 66,046 bytes | 72,174 bytes |
 
 Final commands and evidence:
 
@@ -75,10 +81,16 @@ Remove-Item -LiteralPath dist, build -Recurse -Force -ErrorAction SilentlyContin
 rm -rf dist build
 
 python -m build
-Result: PENDING
+Result: successfully built inferencefit-0.1.0.tar.gz and inferencefit-0.1.0-py3-none-any.whl
+Build backend: Hatchling 1.32.4 in isolated environments
 
 python -m twine check dist/*
-Result: PENDING
+Result: PASSED for both artifacts
+
+Wheel: 38,274 bytes, 39 members
+SHA-256: e90e3cbcc6205982731ebe64be7a479f54264aeb7ae6b2bd4db6a02c617cbaca
+Sdist: 72,174 bytes, 75 members
+SHA-256: 1dba0b8067f9ecf376334ea54b0432fe46f64dc466223ac7d3cc14a3ff35b3da
 ```
 
 ## Installed wheel and sdist
@@ -86,17 +98,17 @@ Result: PENDING
 - [x] A provisional `inferencefit-0.1.0-py3-none-any.whl` passed the clean-environment
   installed-distribution smoke on 2026-09-21. The verifier removed `PYTHONPATH`, ran outside
   the checkout, and rejected source-tree imports.
-- [ ] Install and smoke-test the final wheel from the fresh build.
-- [ ] Install and smoke-test the final sdist from the fresh build.
+- [x] The final wheel passed the clean-environment installed-distribution smoke.
+- [x] The final sdist passed the clean-environment installed-distribution smoke.
 
 The verifier takes positional arguments: artifact, expected version, then source root.
 
 ```text
 python scripts/verify_artifact_install.py dist/inferencefit-0.1.0-py3-none-any.whl 0.1.0 .
-Final wheel result: PENDING
+Final wheel result: PASS (exit 0)
 
 python scripts/verify_artifact_install.py dist/inferencefit-0.1.0.tar.gz 0.1.0 .
-Final sdist result: PENDING
+Final sdist result: PASS (exit 0)
 ```
 
 ## CLI, Python API, and offline smoke
@@ -106,24 +118,27 @@ Final sdist result: PENDING
 - [x] The provisional installed-wheel smoke verified version `0.1.0`, `inferencefit --help`,
   `inferencefit validate`, and a deterministic two-case fixture benchmark with two provider
   successes, zero failures, one complete `result.json`, and `fixture` as the recommendation.
-- [ ] Repeat all installed checks with the final wheel and final sdist.
-- [ ] Run the public basic fixture from the release-candidate source tree and record the run.
-- [ ] Run the public production-inspired fixture workload if it remains public in the candidate.
+- [x] Repeated all installed version/import/CLI/validation/fixture checks with the final wheel and
+  final sdist; both passed in isolated virtual environments outside the checkout.
+- [x] Ran the public basic fixture from the release-candidate source tree and recorded the run.
+- [x] Ran the public production-inspired lead fixture workload and recorded the run.
 
 Source-tree commands and evidence:
 
 ```text
 inferencefit validate examples/basic/eval.yaml
-Result: PENDING
+Result: Valid EvaluationSpec 0.1, 2 candidates
 
 inferencefit benchmark examples/basic/eval.yaml
-Result: PENDING
+Result: run 20260924T082529Z-c07bf7; 6 provider successes, 0 failures;
+recommendation cascade:cheap->strong
 
 inferencefit validate examples/lead_semantic_units/eval.fixture.yaml
-Result: PENDING
+Result: Valid EvaluationSpec 0.1, 2 candidates
 
 inferencefit benchmark examples/lead_semantic_units/eval.fixture.yaml
-Result: PENDING
+Result: run 20260924T082530Z-720f3d; 48 provider successes, 0 failures;
+recommendation cascade:cheap-fixture->strong-fixture
 ```
 
 No paid Fireworks or DeepSeek run is required for this release pass; E0.5 already records the
@@ -139,21 +154,28 @@ successful live validation.
 - [x] The committed E0.5 report states that the public lead example is synthetic and that exact
   credential-value and generic high-risk token scans found zero matches in the material checked
   during E0.5.
-- [ ] Review the exact release-candidate tracked files for real identifiers, contact details,
-  credentials, private URLs/IDs, and private production-derived inputs. Manually classify
-  synthetic values such as `mira@example.test` and `+1-202-555-0147`; do not delete them solely
+- [x] Reviewed the exact release-candidate tracked files for real identifiers, contact details,
+  credentials, private URLs/IDs, and private production-derived inputs. Synthetic values such as
+  `mira@example.test` and `+1-202-555-0147` were manually classified rather than rejected solely
   because they look realistic.
 - [x] The isolated Task 4 wheel and sdist passed the archive audit after `CHANGELOG.md` was added:
   39 wheel members and 73 sdist members, with no forbidden-state or secret-like finding.
-- [ ] Repeat the successful audit against the final wheel and sdist and record exact final
+- [x] Repeated the successful audit against the final wheel and sdist and recorded exact final
   evidence.
 
 ```text
 python scripts/audit_distribution.py dist --expected-version 0.1.0
-Result: PENDING
-Wheel member count: PENDING
-Sdist member count: PENDING
-Privacy-review notes: PENDING
+Result: PASS
+Wheel member count: 39
+Sdist member count: 75
+Privacy-review notes: PASS for all 80 tracked HEAD blobs and every archive member. No forbidden
+tracked paths or artifact members were found. Two unique non-empty provider credential values
+were compared byte-for-byte with tracked and packaged content; match count was zero and no value
+was printed. All bearer/secret-prefix/key-assignment, email, phone, URL, model-ID, and run-ID hits
+were manually classified as deliberate negative-test fixtures, explicitly synthetic public
+examples, public documentation/provider endpoints, localhost defaults, or broad-regex false
+positives. No private path, UUID, account/project/deployment identifier, or private raw input was
+found.
 ```
 
 ## Python and CI coverage
@@ -163,21 +185,25 @@ Privacy-review notes: PENDING
   Python 3.14.0 on Windows; this is supplemental evidence, not a declared 3.14 support claim.
 - [ ] Verify Ubuntu on Python 3.11, 3.12, and 3.13 in GitHub Actions.
 - [ ] Verify Windows on Python 3.13 in GitHub Actions.
-- [ ] Verify the packaging job builds once, checks and audits both distributions, and smoke-tests
-  final wheel and sdist without provider credentials or paid network inference.
+- [x] Structural workflow tests verified that the packaging job builds once, checks and audits
+  both distributions, and smoke-tests the final wheel and sdist without provider credentials or
+  paid network inference.
 - [ ] Record the CI workflow run URL and conclusion.
 
 Evidence fields:
 
 ```text
 Local interpreter: Python 3.14.0 / Windows NT 10.0.26200.0
-CI workflow: PENDING (Task 5)
+CI workflow: implemented and structurally verified; exact candidate not pushed, so no run exists
 Ubuntu 3.11: PENDING
 Ubuntu 3.12: PENDING
 Ubuntu 3.13: PENDING
 Windows 3.13: PENDING
-Packaging job: PENDING
-Run URL: PENDING
+Packaging job: 23 workflow contract tests passed; runtime GitHub Actions evidence pending
+Run URL: NONE -- public API returned zero workflow runs and local commit is absent from origin
+
+Local interpreter discovery (`py -0p`) found Python 3.14 and 3.9 only. Python 3.11, 3.12, and
+3.13 were not locally available, so they are not claimed as passed.
 ```
 
 ## PyPI and TestPyPI name checks
@@ -185,37 +211,41 @@ Run URL: PENDING
 Check both indexes immediately before the readiness decision. A legitimate ownership conflict is
 a release blocker; an HTTP 404 alone is evidence of no current project page, not a reservation.
 
-- [ ] Check `inferencefit` on PyPI.
-- [ ] Check `inferencefit` on TestPyPI.
+- [x] Checked `inferencefit` on PyPI.
+- [x] Checked `inferencefit` on TestPyPI.
 
 ```text
-Checked at (UTC): PENDING
+Checked at (UTC): 2026-09-24T08:32:47Z
 PyPI URL: https://pypi.org/project/inferencefit/
-PyPI HTTP/result: PENDING
+PyPI HTTP/result: 404 / available at check time
 TestPyPI URL: https://test.pypi.org/project/inferencefit/
-TestPyPI HTTP/result: PENDING
-Conflict review: PENDING
+TestPyPI HTTP/result: 404 / available at check time
+Conflict review: no current project page on either official JSON endpoint; a 404 is not a name
+reservation and must be rechecked immediately before publishing
 ```
 
 ## Trusted Publishing and publication rehearsal
 
-- [ ] Add and verify `.github/workflows/testpypi.yml` with explicit dispatch, immutable build
+- [x] Added and verified `.github/workflows/testpypi.yml` with explicit dispatch, immutable build
   artifacts, environment `testpypi`, and OIDC only in the publish job.
-- [ ] Add and verify `.github/workflows/release.yml` with a `v*` tag trigger, tag/version match,
+- [x] Added and verified `.github/workflows/release.yml` with a `v*` tag trigger, tag/version match,
   immutable build artifacts, environment `pypi`, and OIDC only in the publish job.
-- [ ] Add exact owner setup instructions in `docs/releasing.md`.
+- [x] Added exact owner setup instructions in `docs/releasing.md`.
 - [ ] Confirm the GitHub environments `testpypi` and `pypi` exist; require human approval for
   production.
 - [ ] Confirm the `inferencefit` Trusted Publisher relationships on TestPyPI and PyPI use the
   exact owner, repository, workflow filename, and environment.
-- [ ] If already configured and intentionally approved, exercise TestPyPI; otherwise record it as
-  not attempted and leave exact manual setup steps.
-- [ ] Confirm no long-lived PyPI token is required or stored.
+- [x] TestPyPI was not exercised because the GitHub environment and publisher are not configured;
+  it is recorded as not attempted, with exact manual setup steps retained in `docs/releasing.md`.
+- [x] Confirmed the workflows use OIDC only, require no long-lived PyPI token, and contain no
+  publishing secret reference. The tracked/archive privacy scan found no credential value.
 
 ```text
-TestPyPI workflow/configuration: PENDING (Task 6)
-TestPyPI upload: PENDING / not attempted
-Production workflow/configuration: PENDING (Task 6)
+TestPyPI workflow/configuration: repository workflow PASS; public GitHub API reports no
+testpypi environment
+TestPyPI upload: NOT ATTEMPTED -- publisher/environment not configured
+Production workflow/configuration: repository workflow PASS; public GitHub API reports no
+pypi environment
 Production upload: NOT PERFORMED
 ```
 
@@ -223,14 +253,15 @@ Production upload: NOT PERFORMED
 
 Current release blockers:
 
-- final clean build, Twine check, artifact audit, and exact size/member evidence are incomplete;
-- final wheel and sdist clean-install smoke checks are incomplete;
-- final full test, repository-wide lint/format, and public fixture runs are incomplete;
-- cross-platform CI and packaging workflow evidence are incomplete;
-- PyPI and TestPyPI name checks are incomplete;
-- Trusted Publishing workflows, account-side configuration status, and owner instructions are
-  incomplete;
-- whole-branch review and final evidence refresh are incomplete.
+- the exact candidate commit is not on `origin`, the public repository has no workflow runs, and
+  therefore Ubuntu Python 3.11/3.12/3.13, Windows Python 3.13, and the packaging job have no
+  GitHub Actions runtime evidence;
+- the public GitHub API reports no `testpypi` or `pypi` environments, so required production
+  reviewers/manual approval are not configured;
+- the TestPyPI and PyPI Trusted Publisher relationships cannot be confirmed and TestPyPI has not
+  been rehearsed; publication must remain blocked until the owner completes and verifies the
+  account-side setup;
+- whole-branch review and its post-review evidence refresh remain to be completed in Task 8.
 
 Any failed correctness, install, content, privacy, name, CI, or workflow-security gate also blocks
 the release until corrected. Account-side Trusted Publisher setup may remain a documented human
@@ -240,11 +271,12 @@ gate for a code-complete candidate, but publication must not proceed without it.
 
 `BLOCKED_FOR_0.1.0`
 
-Reason: release preparation is still in progress and the required Tasks 5–8 evidence above has
-not been collected. Task 7 must replace this decision only after every required gate passes; do
-not infer readiness from provisional artifacts.
+Reason: all local code, documentation, build, install, offline-example, privacy, and package-name
+gates pass, but the exact commit has no required cross-platform GitHub Actions run, the two GitHub
+environments are absent, the Trusted Publisher relationships are unverified, and no TestPyPI
+rehearsal exists. These are concrete fail-closed release blockers.
 
-Decision date (UTC): 2026-09-21
+Decision date (UTC): 2026-09-24
 
 ## Final human actions
 
@@ -260,6 +292,19 @@ owner must:
 6. manually approve the `pypi` environment after verifying that the workflow is publishing the
    already-verified immutable artifacts.
 
-The exact push, workflow, and tag command sequence remains PENDING until Tasks 6–8 establish and
-review the final workflow filenames and branch state. No production upload or tag push is
-authorized by this checklist.
+Exact owner sequence after Task 8 review:
+
+```text
+git status
+git push -u origin codex/release-0.1.0
+# wait for the exact commit's CI and packaging jobs to pass; record the run URL above
+# configure and verify the testpypi and pypi environments and Trusted Publishers per docs/releasing.md
+# run Publish to TestPyPI manually and verify inferencefit==0.1.0 from TestPyPI
+# merge only after every blocker above is cleared
+git switch main
+git pull --ff-only
+git tag -a v0.1.0 -m "InferenceFit 0.1.0"
+git push origin v0.1.0
+```
+
+None of those commands, uploads, merges, or approvals were performed by this preparation task.
