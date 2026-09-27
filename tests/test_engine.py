@@ -161,6 +161,10 @@ optimization: {objective: min_cost}
         "routing-policy.yaml",
     }
     assert "credential" not in (run_dir / "result.json").read_text(encoding="utf-8").lower()
+    persisted = json.loads(
+        (run_dir / "observations.jsonl").read_text(encoding="utf-8").splitlines()[0]
+    )
+    assert persisted["cost_source"] == "configured_pricing"
 
     before = (run_dir / "observations.jsonl").read_text(encoding="utf-8")
     resumed = await benchmark(
@@ -339,3 +343,82 @@ async def test_cancellation_stops_workers_before_return(tmp_path):
     with pytest.raises(asyncio.CancelledError):
         await task
     assert store.observations("cancel-run") == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "provider_cost,expected_cost,source",
+    [
+        (0.0, 0.0, "provider_reported"),
+        (0.25, 0.25, "provider_reported"),
+        (None, 0.000008, "configured_pricing"),
+    ],
+)
+async def test_execution_persists_metadata_and_authoritative_cost(
+    provider_cost, expected_cost, source
+):
+    from inferencefit.contracts import EvaluationSpec, Observation
+    from inferencefit.execution.runner import _execute
+    from inferencefit.providers import ProviderResponse
+
+    spec = EvaluationSpec.model_validate(
+        {
+            "dataset": {"path": "unused"},
+            "candidates": [
+                {
+                    "id": "x",
+                    "provider": "fixture",
+                    "model": "requested",
+                    "pricing": {"input_per_million": 1, "output_per_million": 2},
+                }
+            ],
+        }
+    )
+
+    class MetadataProvider:
+        async def complete(self, candidate, test_case, repetition):
+            return ProviderResponse(
+                raw_output="ok",
+                latency_ms=1,
+                input_tokens=2,
+                output_tokens=3,
+                total_tokens=5,
+                cost_usd=provider_cost,
+                provider="reported",
+                model="served",
+                provider_backend="backend",
+            )
+
+    observation = await _execute(spec.candidates[0], case(), 0, spec, MetadataProvider())
+    persisted = Observation.model_validate_json(observation.model_dump_json())
+    assert persisted.cost_usd == pytest.approx(expected_cost)
+    assert persisted.cost_source == source
+    assert persisted.usage.total_tokens == 5
+    assert (persisted.provider, persisted.model, persisted.provider_backend) == (
+        "reported",
+        "served",
+        "backend",
+    )
+
+
+@pytest.mark.asyncio
+async def test_execution_missing_metadata_and_cost_remain_unknown():
+    from inferencefit.contracts import EvaluationSpec
+    from inferencefit.execution.runner import _execute
+    from inferencefit.providers import ProviderResponse
+
+    spec = EvaluationSpec.model_validate(
+        {
+            "dataset": {"path": "unused"},
+            "candidates": [{"id": "x", "provider": "fixture", "model": "m"}],
+        }
+    )
+
+    class MinimalProvider:
+        async def complete(self, candidate, test_case, repetition):
+            return ProviderResponse(raw_output="ok", latency_ms=1)
+
+    observation = await _execute(spec.candidates[0], case(), 0, spec, MinimalProvider())
+    assert observation.cost_usd is observation.cost_source is None
+    assert observation.provider is observation.model is observation.provider_backend is None
+    assert observation.usage.total_tokens is None

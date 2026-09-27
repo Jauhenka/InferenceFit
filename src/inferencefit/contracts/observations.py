@@ -14,6 +14,7 @@ class TokenUsage(BaseModel):
     model_config = ConfigDict(extra="forbid")
     input_tokens: int | None = None
     output_tokens: int | None = None
+    total_tokens: int | None = None
 
 
 class ObservationError(BaseModel):
@@ -35,6 +36,10 @@ class Observation(BaseModel):
     usage: TokenUsage = Field(default_factory=TokenUsage)
     latency_ms: float | None = None
     cost_usd: float | None = None
+    provider: str | None = None
+    model: str | None = None
+    provider_backend: str | None = None
+    cost_source: Literal["provider_reported", "configured_pricing"] | None = None
     provider_attempts: int = 1
     validation: ValidationSummary | None = None
     error: ObservationError | None = None

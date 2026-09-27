@@ -185,7 +185,7 @@ async def test_openai_compatible_adapter_normalizes_response(respx_mock):
             json={
                 "model": "served-model",
                 "choices": [{"message": {"content": "answer"}}],
-                "usage": {"prompt_tokens": 3, "completion_tokens": 2},
+                "usage": {"prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5},
             },
         )
     )
@@ -196,6 +196,8 @@ async def test_openai_compatible_adapter_normalizes_response(respx_mock):
     assert result.raw_output == "answer"
     assert result.input_tokens == 3
     assert result.output_tokens == 2
+    assert result.total_tokens == 5
+    assert result.model == "served-model"
     assert route.calls[0].request.headers["authorization"] == "Bearer token"
 
 

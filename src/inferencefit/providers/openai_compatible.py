@@ -7,6 +7,7 @@ import httpx
 from inferencefit.contracts import CandidateSpec, TestCase
 
 from .base import ProviderError, ProviderResponse
+from .http_errors import provider_error_from_response
 
 PRESET_URLS = {
     "deepseek": "https://api.deepseek.com",
@@ -39,28 +40,42 @@ class OpenAICompatibleProvider:
                 response = await client.post(
                     f"{base_url.rstrip('/')}/chat/completions", json=payload, headers=headers
                 )
-            if response.status_code == 429 or 500 <= response.status_code < 600:
-                raise ProviderError(
-                    f"provider HTTP {response.status_code}", retryable=True, kind="http"
-                )
-            response.raise_for_status()
+            if response.is_error or response.is_redirect:
+                raise provider_error_from_response(response, provider=candidate.provider)
             try:
                 data = response.json()
                 content = data["choices"][0]["message"]["content"]
-                usage = data.get("usage", {})
-            except (ValueError, KeyError, IndexError, TypeError) as exc:
-                raise ProviderError("malformed provider response", kind="response") from exc
+            except (ValueError, KeyError, IndexError, TypeError):
+                raise ProviderError("malformed provider response", kind="response") from None
+            usage = data.get("usage")
+            if not isinstance(usage, dict):
+                usage = {}
+            model = data.get("model")
+            if not isinstance(model, str) or not model:
+                model = candidate.model
+
+            def token_count(name: str) -> int | None:
+                value = usage.get(name)
+                return value if type(value) is int and value >= 0 else None
+
             return ProviderResponse(
                 raw_output=content,
                 latency_ms=(time.perf_counter() - started) * 1000,
-                input_tokens=usage.get("prompt_tokens"),
-                output_tokens=usage.get("completion_tokens"),
+                input_tokens=token_count("prompt_tokens"),
+                output_tokens=token_count("completion_tokens"),
+                total_tokens=token_count("total_tokens"),
                 provider=candidate.provider,
-                model=data.get("model", candidate.model),
+                model=model,
             )
         except ProviderError:
             raise
-        except (httpx.TimeoutException, httpx.NetworkError) as exc:
-            raise ProviderError(type(exc).__name__, retryable=True, kind="network") from exc
-        except httpx.HTTPError as exc:
-            raise ProviderError(type(exc).__name__, kind="http") from exc
+        except httpx.TimeoutException:
+            raise ProviderError(
+                "provider request timeout", retryable=True, kind="timeout"
+            ) from None
+        except httpx.NetworkError:
+            raise ProviderError(
+                "provider network failure", retryable=True, kind="network"
+            ) from None
+        except httpx.HTTPError:
+            raise ProviderError("provider HTTP failure", kind="http") from None
