@@ -31,7 +31,7 @@ Evidence: `pyproject.toml`, `src/inferencefit/__init__.py`,
 - [x] Focused metadata and distribution-audit suite: `46 passed`.
 - [x] Ruff check and format check passed for the Task 3 audit implementation and tests.
 - [x] The exact release candidate passed the final full suite: `169 passed, 2 warnings` on
-  2026-09-24 under Python 3.14.0.
+  2026-09-27 under Python 3.14.0 after the cross-platform archive-test correction.
 - [x] The complete suite also passed under supported Python 3.11.9 on Windows:
   `169 passed, 1 warning`.
 - [x] Independent whole-branch review completed; all four Important findings were fixed with
@@ -45,7 +45,7 @@ Final commands and evidence:
 
 ```text
 python -m pytest -q
-Result: 169 passed, 2 warnings in 1.63s on Python 3.14.0
+Result: 169 passed, 2 warnings in 1.80s on Python 3.14.0
 Python 3.11 result: 169 passed, 1 warning in 1.93s
 Warnings: Starlette deprecates httpx with starlette.testclient; anyio.abc.BlockingPortal alias is
 deprecated in favor of anyio.from_thread.BlockingPortal. Both originate in installed
@@ -64,7 +64,7 @@ Result: 61 files already formatted
 - [x] After `CHANGELOG.md` was added, an isolated Task 4 build passed the distribution-content
   audit with 39 wheel members and 73 sdist members.
 - [x] Removed only the validated repository-local `dist/` and `build/` directories and rebuilt
-  from artifact-input commit `c9e36b8fcdf6cebc782fee0c74625da2ea03f808`. The subsequently
+  from artifact-input commit `5c9686f3470bd3bd2379df0393ffaac9de750923`. The subsequently
   updated checklist is excluded from the sdist, eliminating self-referential artifact drift.
 - [x] Twine checks passed on both final artifacts.
 - [x] Recorded exact final artifact names, byte sizes, member counts, and SHA-256 digests.
@@ -75,7 +75,7 @@ evidence because Tasks 5–8 may still change the candidate):
 | Artifact | Observed size | Final size |
 | --- | ---: | ---: |
 | `inferencefit-0.1.0-py3-none-any.whl` | 38,274 bytes | 38,274 bytes |
-| `inferencefit-0.1.0.tar.gz` | 66,046 bytes | 67,207 bytes |
+| `inferencefit-0.1.0.tar.gz` | 66,046 bytes | 67,247 bytes |
 
 Final commands and evidence:
 
@@ -95,8 +95,8 @@ Result: PASSED for both artifacts
 
 Wheel: 38,274 bytes, 39 members
 SHA-256: e90e3cbcc6205982731ebe64be7a479f54264aeb7ae6b2bd4db6a02c617cbaca
-Sdist: 67,207 bytes, 73 members
-SHA-256: 968e660a05dd054b36c650174753189d5d9cbfe1f0ced04145404c02bd32534a
+Sdist: 67,247 bytes, 73 members
+SHA-256: bb26289bbb976a8e8fe73339e52a8ae9aad34b309826609d0a9295ba3a4ad63d
 Planning/checklist members: 0 (`docs/implementation-plan.md` and
 `docs/release-0.1.0.md` are excluded)
 ```
@@ -192,24 +192,32 @@ found.
 - [x] The local development interpreter used for the prior task evidence currently reports
   Python 3.14.0 on Windows; this is supplemental evidence, not a declared 3.14 support claim.
 - [x] The full suite passed locally on supported Python 3.11.9 on Windows.
-- [ ] Verify Ubuntu on Python 3.11, 3.12, and 3.13 in GitHub Actions.
-- [ ] Verify Windows on Python 3.13 in GitHub Actions.
+- [x] Verified Ubuntu on Python 3.11, 3.12, and 3.13 in GitHub Actions.
+- [x] Verified Windows on Python 3.13 in GitHub Actions.
 - [x] Structural workflow tests verified that the packaging job builds once, checks and audits
   both distributions, and smoke-tests the final wheel and sdist without provider credentials or
   paid network inference.
-- [ ] Record the CI workflow run URL and conclusion.
+- [x] Recorded the successful CI workflow run URL and conclusion for the exact artifact-input
+  commit.
 
 Evidence fields:
 
 ```text
 Local interpreters: Python 3.14.0 and Python 3.11.9 / Windows NT 10.0.26200.0
-CI workflow: implemented and structurally verified; exact candidate not pushed, so no run exists
-Ubuntu 3.11: PENDING
-Ubuntu 3.12: PENDING
-Ubuntu 3.13: PENDING
-Windows 3.13: PENDING
-Packaging job: 23 workflow contract tests passed; runtime GitHub Actions evidence pending
-Run URL: NONE -- public API returned zero workflow runs and local commit is absent from origin
+CI commit: 5c9686f3470bd3bd2379df0393ffaac9de750923
+Ubuntu 3.11: SUCCESS
+Ubuntu 3.12: SUCCESS
+Ubuntu 3.13: SUCCESS
+Windows 3.13: SUCCESS
+Static analysis: SUCCESS
+Packaging job: SUCCESS, including build and distribution verification
+Pull-request run: https://github.com/Jauhenka/InferenceFit/actions/runs/36314816733
+Push run: https://github.com/Jauhenka/InferenceFit/actions/runs/36314813823
+
+The earlier pull-request run at https://github.com/Jauhenka/InferenceFit/actions/runs/36314222527
+failed only on Ubuntu because the duplicate-normalized-member test asserted an incidental
+platform-dependent `zipfile` warning. Commit `5c9686f` stopped asserting that upstream warning
+while retaining the product-level duplicate rejection, and both exact-commit runs then passed.
 
 The installed user-profile Python 3.11.9 runtime was accessed in the approved elevated
 verification session through a disposable virtual environment; that environment reported
@@ -264,15 +272,12 @@ Production upload: NOT PERFORMED
 ## Blockers
 
 The reviewed source, package metadata, workflows, artifacts, installed smoke checks, offline
-examples, privacy scan, and package-name status have no remaining local blocker. The independent
-whole-branch review's four Important findings were fixed with regression coverage, and every
-local gate was rerun.
+examples, privacy scan, package-name status, and cross-platform CI have no remaining code or
+artifact blocker. The independent whole-branch review's four Important findings were fixed with
+regression coverage, and every local gate was rerun.
 
 Current release blockers:
 
-- the exact candidate commit is not on `origin`, the public repository has no workflow runs, and
-  therefore Ubuntu Python 3.11/3.12/3.13, Windows Python 3.13, and the packaging job have no
-  GitHub Actions runtime evidence;
 - the public GitHub API reports no `testpypi` or `pypi` environments, so required production
   reviewers/manual approval are not configured;
 - the TestPyPI and PyPI Trusted Publisher relationships cannot be confirmed and TestPyPI has not
@@ -287,19 +292,20 @@ gate for a code-complete candidate, but publication must not proceed without it.
 
 `BLOCKED_FOR_0.1.0`
 
-Reason: all local code, documentation, build, install, offline-example, privacy, and package-name
-gates pass, but the exact commit has no required cross-platform GitHub Actions run, the two GitHub
-environments are absent, the Trusted Publisher relationships are unverified, and no TestPyPI
-rehearsal exists. These are concrete fail-closed release blockers.
+Reason: all local code, documentation, build, install, offline-example, privacy, package-name, and
+cross-platform CI gates pass, but the two GitHub environments are absent, the Trusted Publisher
+relationships are unverified, and no TestPyPI rehearsal exists. These are concrete fail-closed
+release blockers.
 
-Decision date (UTC): 2026-09-24
+Decision date (UTC): 2026-09-27
 
 ## Final human actions
 
 Do not publish or tag yet. After every recorded blocker is cleared and this checklist says
 `READY_FOR_0.1.0`, the release owner must:
 
-1. review the final Git diff and push `codex/release-0.1.0` for branch CI and normal review;
+1. review the final Git diff and confirm branch CI remains green for artifact-input commit
+   `5c9686f`;
 2. configure and verify the `testpypi` and `pypi` GitHub environments and matching Trusted
    Publishers exactly as documented in `docs/releasing.md`;
 3. merge the reviewed branch into `main` through the repository's normal process and record the
@@ -315,8 +321,7 @@ Exact owner sequence after Task 8 review:
 
 ```text
 git status
-git push -u origin codex/release-0.1.0
-# wait for branch CI and review to pass
+# codex/release-0.1.0 is already pushed; review the PR and its green branch CI
 # configure and verify the testpypi and pypi environments and Trusted Publishers per docs/releasing.md
 # merge the reviewed branch into main through the repository's normal process
 # record the exact resulting main commit SHA
