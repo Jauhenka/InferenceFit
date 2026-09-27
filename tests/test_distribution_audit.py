@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tarfile
+import warnings
 import zipfile
 from io import BytesIO
 from pathlib import Path
@@ -264,11 +265,12 @@ def test_sdist_root_and_pkg_info_identity_must_match_filename(tmp_path: Path) ->
 
 def test_duplicate_normalized_member_is_rejected(tmp_path: Path) -> None:
     dist = write_valid_distribution(tmp_path)
-    with pytest.warns(UserWarning, match="Duplicate name"):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="Duplicate name: .*", category=UserWarning)
         with zipfile.ZipFile(dist / WHEEL_NAME, "a") as archive:
             archive.writestr(r"inferencefit-0.1.0.dist-info\METADATA", "Name: inferencefit\n")
 
-    with pytest.raises(audit.AuditError, match="duplicate"):
+    with pytest.raises(audit.AuditError, match="duplicate normalized archive member"):
         audit.audit_distribution(dist, expected_version="0.1.0")
 
 
