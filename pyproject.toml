@@ -4,18 +4,21 @@ build-backend = "hatchling.build"
 
 [project]
 name = "inferencefit"
-version = "0.1.0"
-description = "Local-first benchmarking and deterministic LLM configuration optimizer."
+dynamic = ["version"]
+description = "Local-first, workload-specific evaluation and deterministic optimization for LLM configurations."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "InferenceFit contributors" }]
-keywords = ["llm", "benchmarking", "optimization", "evaluation"]
+keywords = ["llm", "evaluation", "benchmarking", "optimization", "routing"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
 ]
 dependencies = [
     "pydantic>=2.7",
@@ -38,10 +41,44 @@ dev = [
     "respx>=0.21",
     "httpx>=0.27",
     "ruff>=0.5",
+    "twine>=5.1",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Jauhenka/InferenceFit"
+Repository = "https://github.com/Jauhenka/InferenceFit"
+Issues = "https://github.com/Jauhenka/InferenceFit/issues"
+Documentation = "https://github.com/Jauhenka/InferenceFit/tree/main/docs"
+
+[tool.hatch.version]
+path = "src/inferencefit/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/inferencefit"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.coverage",
+    "/.env*",
+    "/.github",
+    "/.inferencefit",
+    "/.mypy_cache",
+    "/.nox",
+    "/.pytest_cache",
+    "/.ruff_cache",
+    "/.superpowers",
+    "/.tox",
+    "/.venv",
+    "/.vs",
+    "/AGENTS.md",
+    "/build",
+    "/docs/implementation-plan.md",
+    "/docs/release-0.1.0.md",
+    "/docs/superpowers",
+    "/dist",
+    "/htmlcov",
+    "/venv",
+]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
