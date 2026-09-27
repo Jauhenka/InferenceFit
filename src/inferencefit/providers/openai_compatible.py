@@ -13,6 +13,7 @@ PRESET_URLS = {
     "deepseek": "https://api.deepseek.com",
     "openrouter": "https://openrouter.ai/api/v1",
     "fireworks": "https://api.fireworks.ai/inference/v1",
+    "gemini": "https://generativelanguage.googleapis.com/v1beta/openai",
     "ollama": "http://127.0.0.1:11434/v1",
     "vllm": "http://127.0.0.1:8000/v1",
 }
