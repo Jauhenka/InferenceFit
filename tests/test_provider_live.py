@@ -45,10 +45,16 @@ async def _run_live_benchmark(tmp_path: Path, *, provider: str, model: str, para
     usage = observation["usage"]
     if any(value is not None for value in usage.values()):
         assert any(value > 0 for value in usage.values() if value is not None)
+    summary = next(item for item in result.candidate_summaries if item.id == "live-smoke")
+    assert summary.total_input_tokens == (usage["input_tokens"] or 0)
+    assert summary.total_output_tokens == (usage["output_tokens"] or 0)
 
     persisted_result = json.loads((run_dir / "result.json").read_text(encoding="utf-8"))
     assert result.status == persisted_result["status"] == "completed"
     assert persisted_result["candidate_summaries"][0]["provider_success_count"] == 1
+    persisted_summary = persisted_result["candidate_summaries"][0]
+    assert persisted_summary["total_input_tokens"] == summary.total_input_tokens
+    assert persisted_summary["total_output_tokens"] == summary.total_output_tokens
 
 
 @pytest.mark.provider_live

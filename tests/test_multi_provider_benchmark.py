@@ -173,6 +173,11 @@ execution: {retry: {max_attempts: 1}}
     assert all(
         item["provider_success_count"] == 1 for item in persisted_result["candidate_summaries"]
     )
+    summaries = {summary.id: summary for summary in result.candidate_summaries}
+    assert {
+        candidate_id: (summary.total_input_tokens, summary.total_output_tokens)
+        for candidate_id, summary in summaries.items()
+    } == {"router": (2, 3), "gemini": (4, 2), "openai": (7, 3)}
     assert {path.name for path in run_dir.iterdir()} == {
         "spec.yaml",
         "dataset.jsonl",
