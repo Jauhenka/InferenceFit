@@ -17,7 +17,8 @@ Each response is a JSON object with one `units` array. Every unit has a `type` f
 - `dataset.multilingual.jsonl`: two cases each in Russian, Ukrainian, Belarusian, and Polish.
 - `eval.fixture.yaml`: two illustrative fixture candidates plus a schema-gated cascade.
 - `eval.multilingual.fixture.yaml`: offline multilingual coverage.
-- `eval.fireworks*.yaml` and `eval.deepseek*.yaml`: opt-in live specs; they contain credential references, never credentials.
+- `eval.*.smoke.yaml`: opt-in single-provider live specs; they contain credential references, never credentials.
+- `eval.fireworks.yaml` and `eval.deepseek.yaml`: larger provider evaluation specs.
 
 ```powershell
 inferencefit validate examples/lead_semantic_units/eval.fixture.yaml
@@ -26,7 +27,12 @@ inferencefit benchmark examples/lead_semantic_units/eval.fixture.yaml
 # These commands spend provider credits and require the corresponding key.
 inferencefit benchmark examples/lead_semantic_units/eval.fireworks.smoke.yaml
 inferencefit benchmark examples/lead_semantic_units/eval.deepseek.smoke.yaml
+inferencefit benchmark examples/lead_semantic_units/eval.openrouter.smoke.yaml
+inferencefit benchmark examples/lead_semantic_units/eval.gemini.smoke.yaml
+inferencefit benchmark examples/lead_semantic_units/eval.openai.smoke.yaml
 ```
+
+The smoke specs use `OPEN_ROUTER_API_KEY`, `GEMINI_API_KEY`, and `OPENAI_API_KEY` through their credential references. Model catalogs and supported request parameters can change; check the provider's current model and API documentation if a default is unavailable. To select another model for a live pytest check, set `OPEN_ROUTER_TEST_MODEL`, `GEMINI_TEST_MODEL`, or `OPENAI_TEST_MODEL` respectively, then run `python -m pytest tests/test_provider_live.py -m provider_live -q`. Each check skips when its own provider key is absent.
 
 The fixture outputs are deliberately illustrative. They demonstrate that a cheaper model can be fast yet fail exact extraction, and that only schema-invalid outputs trigger the runtime cascade. They are not copied from, or represented as, real provider responses.
 
