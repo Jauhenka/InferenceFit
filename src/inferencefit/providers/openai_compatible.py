@@ -22,13 +22,22 @@ class OpenAICompatibleProvider:
     def __init__(self, credential: str | None = None):
         self.credential = credential
 
+    def _base_url(self, candidate: CandidateSpec) -> str | None:
+        return candidate.base_url or PRESET_URLS.get(candidate.provider)
+
+    def _request_headers(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self.credential}"} if self.credential else {}
+
+    def _response_metadata(self, data: dict) -> dict:
+        return {}
+
     async def complete(
         self, candidate: CandidateSpec, case: TestCase, repetition: int
     ) -> ProviderResponse:
-        base_url = candidate.base_url or PRESET_URLS.get(candidate.provider)
+        base_url = self._base_url(candidate)
         if not base_url:
             raise ProviderError("OpenAI-compatible candidate requires base_url")
-        headers = {"Authorization": f"Bearer {self.credential}"} if self.credential else {}
+        headers = self._request_headers()
         payload = {
             "model": candidate.model,
             "messages": [x.model_dump(exclude_none=True) for x in case.request.messages],
@@ -66,6 +75,7 @@ class OpenAICompatibleProvider:
                 total_tokens=token_count("total_tokens"),
                 provider=candidate.provider,
                 model=model,
+                **self._response_metadata(data),
             )
         except ProviderError:
             raise
