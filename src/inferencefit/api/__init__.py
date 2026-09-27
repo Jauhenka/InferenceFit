@@ -7,11 +7,12 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from inferencefit import __version__
 from inferencefit.core import benchmark, new_run_id
 from inferencefit.dataset import load_jsonl_dataset
 from inferencefit.spec import load_evaluation_spec
 
-app = FastAPI(title="InferenceFit", version="0.1.0")
+app = FastAPI(title="InferenceFit", version=__version__)
 
 
 class RunRequest(BaseModel):
@@ -44,7 +45,7 @@ jobs: dict[str, Job] = {}
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "0.1.0"}
+    return {"status": "ok", "version": __version__}
 
 
 @app.post("/v1/runs", status_code=202)

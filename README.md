@@ -6,7 +6,7 @@ test cases against candidate providers and models, measures quality, reliability
 use, and cost, applies your hard constraints, and produces a deterministic recommendation and an
 open routing policy.
 
-InferenceFit 0.1.0 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
+InferenceFit 0.2.0 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
 
 ## Installation
 
@@ -52,6 +52,15 @@ inferencefit benchmark examples/lead_semantic_units/eval.fireworks.smoke.yaml
 
 # Requires DEEPSEEK_API_KEY
 inferencefit benchmark examples/lead_semantic_units/eval.deepseek.smoke.yaml
+
+# Requires OPEN_ROUTER_API_KEY
+inferencefit benchmark examples/lead_semantic_units/eval.openrouter.smoke.yaml
+
+# Requires GEMINI_API_KEY
+inferencefit benchmark examples/lead_semantic_units/eval.gemini.smoke.yaml
+
+# Requires OPENAI_API_KEY
+inferencefit benchmark examples/lead_semantic_units/eval.openai.smoke.yaml
 ```
 
 These specs use synthetic lead-extraction cases. See the
@@ -63,7 +72,9 @@ and observed results.
 
 An `EvaluationSpec` YAML file connects a JSONL dataset to candidates, validators, hard constraints,
 an optimization objective, and bounded execution settings. Candidate pricing is an explicit
-snapshot in USD per million input and output tokens; InferenceFit does not fetch prices.
+snapshot in USD per million input and output tokens; InferenceFit does not fetch price catalogs.
+An authoritative per-request cost reported by OpenRouter takes precedence over configured pricing.
+When neither reported cost nor sufficient token counts and pricing are available, cost is unknown.
 
 Built-in validators cover exact values, regular expressions, enums, JSON Schema, numeric values,
 containment, and local Python callables. Exact, numeric, and Python validators can use hidden
@@ -103,15 +114,58 @@ Resume checks the spec and dataset hashes before skipping completed
 
 ## Providers and credentials
 
-The `fixture` provider is deterministic and offline. The generic, non-streaming OpenAI-compatible
-adapter accepts an explicit base URL and includes endpoint presets for Fireworks, DeepSeek,
-OpenRouter, Ollama, and vLLM. It uses the providers' chat-completions-shaped HTTP interface without
-vendor SDKs.
+The supported paths use non-streaming HTTP requests without vendor SDKs:
+
+| Provider | API path | Default credential environment variable |
+| --- | --- | --- |
+| Fireworks (`fireworks`) | OpenAI-compatible chat completions | `FIREWORKS_API_KEY` |
+| DeepSeek (`deepseek`) | OpenAI-compatible chat completions | `DEEPSEEK_API_KEY` |
+| OpenRouter (`openrouter`) | Chat completions with reported cost and backend metadata | `OPEN_ROUTER_API_KEY` |
+| Gemini (`gemini`) | Google's OpenAI-compatible chat completions endpoint | `GEMINI_API_KEY` |
+| OpenAI (`openai`) | Native Responses API with `store: false` | `OPENAI_API_KEY` |
+| Fixture (`fixture`) | Deterministic offline testing | None |
+| Ollama (`ollama`) and vLLM (`vllm`) | Local OpenAI-compatible chat completions | Optional explicit reference |
+| Custom compatible endpoint | Chat completions at an explicit `base_url` | Optional explicit reference |
 
 Credentials are resolved from opaque references. For example, `credential_ref: fireworks-main`
-checks `INFERENCEFIT_CREDENTIAL_FIREWORKS_MAIN` and then `FIREWORKS_API_KEY`; DeepSeek similarly
-falls back to `DEEPSEEK_API_KEY`, and OpenRouter to `OPENROUTER_API_KEY`. Secret values are not
-written to run artifacts.
+checks `INFERENCEFIT_CREDENTIAL_FIREWORKS_MAIN` first, then `FIREWORKS_API_KEY`. The other hosted
+providers fall back to their variables in the table. OpenRouter's exact name is
+`OPEN_ROUTER_API_KEY`; the older `OPENROUTER_API_KEY` spelling is not a resolver fallback.
+Credential values are never written to run artifacts.
+
+Minimal candidate configurations for the new providers can be placed under `candidates` in an
+evaluation spec with `schema_version: "0.1"` and a dataset of chat messages:
+
+```yaml
+candidates:
+  - id: router
+    provider: openrouter
+    model: openrouter/free
+    credential_ref: openrouter-main
+    parameters: {max_tokens: 32}
+  - id: gemini
+    provider: gemini
+    model: gemini-3.5-flash-lite
+    credential_ref: gemini-main
+    parameters: {max_tokens: 32}
+  - id: openai
+    provider: openai
+    model: gpt-6-luna
+    credential_ref: openai-main
+    parameters: {max_output_tokens: 64}
+```
+
+These are the bundled smoke defaults, not a guarantee of model availability. Model IDs and
+supported parameters vary by model and account; consult the provider's current documentation.
+For example, some OpenAI models reject `temperature`. OpenAI normalizes `max_tokens` or
+`max_completion_tokens` to `max_output_tokens`, rejects conflicting limits, and reserves
+`model`, `input`, and `store`. Each evaluation is stateless. An explicit `base_url` selects
+generic chat completions, including when overriding a hosted provider's native path.
+
+For a local endpoint, use `provider: ollama` or `provider: vllm` with a model served there. For
+another custom compatible server, use `provider: openai-compatible`, an explicit `base_url` (such as
+`http://localhost:8000/v1`), and its model ID. Add an opaque `credential_ref` if authentication
+is required. The [examples guide](examples/README.md) indexes the complete runnable specs.
 
 ## Local daemon
 
@@ -125,15 +179,16 @@ do not expose it to a network.
 
 ## Current limitations
 
-Version 0.1.0 uses a local process job manager and filesystem artifact store. It supports
-non-streaming chat completions, a single two-stage fallback, and Python only. Pricing is static
-configuration rather than provider billing data. Exact validators intentionally do not provide
+Version 0.2.0 uses a local process job manager and filesystem artifact store. It supports
+non-streaming chat completions and OpenAI Responses text output, a single two-stage fallback,
+and Python only. Cost uses reported request cost where available, then static configured prices;
+it is not an invoice reconciliation system. Exact validators intentionally do not provide
 semantic-equivalence scoring. There is no hosted Cloud/SaaS service, account system, traffic proxy,
 browser UI, distributed worker system, learned routing, or model training.
 
-## Roadmap (not available in 0.1.0)
+## Roadmap (not available in 0.2.0)
 
-Potential post-0.1 work includes richer request modalities, more provider-specific metadata,
+Potential future work includes richer request modalities, more provider-specific metadata,
 scalable artifact-store adapters, and additional language SDKs. These are directions, not current
 features or commitments.
 
@@ -152,10 +207,19 @@ ruff format --check .
 Normal tests use fixtures and do not spend provider credits. Live provider testing is opt-in; run
 it only explicitly, with the required credential configured and awareness of provider charges.
 
+```bash
+python -m pytest tests/test_provider_live.py -m provider_live -q
+```
+
+Each live check skips when its own key is absent. To override the bundled model defaults, set
+`OPEN_ROUTER_TEST_MODEL`, `GEMINI_TEST_MODEL`, or `OPENAI_TEST_MODEL` for the matching provider.
+Ordinary CI supplies no credentials and runs the offline suite.
+
 Detailed references:
 
 - [Architecture](docs/architecture.md)
 - [Serialized contracts](docs/contracts.md)
+- [0.2.0 release notes](docs/releases/0.2.0.md)
 - [E0.5 real-world validation](docs/e0.5-real-world-validation.md)
 
 ## License

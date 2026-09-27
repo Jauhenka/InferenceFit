@@ -1,6 +1,8 @@
 import tomllib
 from pathlib import Path
 
+import pytest
+
 import inferencefit
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,7 +17,56 @@ def test_release_version_has_one_maintained_source() -> None:
     assert "version" not in config["project"]
     assert config["project"]["dynamic"] == ["version"]
     assert config["tool"]["hatch"]["version"]["path"] == "src/inferencefit/__init__.py"
-    assert inferencefit.__version__ == "0.1.0"
+    assert inferencefit.__version__ == "0.2.0"
+
+
+@pytest.mark.parametrize(
+    "required",
+    [
+        "InferenceFit 0.2.0",
+        "Fireworks",
+        "DeepSeek",
+        "OpenRouter",
+        "Gemini",
+        "OpenAI",
+        "fixture",
+        "Ollama",
+        "vLLM",
+        "custom",
+        "OPEN_ROUTER_API_KEY",
+        "GEMINI_API_KEY",
+        "OPENAI_API_KEY",
+        "provider: openrouter",
+        "provider: gemini",
+        "provider: openai",
+        "max_output_tokens",
+        "python -m pytest tests/test_provider_live.py -m provider_live -q",
+        "supported parameters",
+        "eval.openrouter.smoke.yaml",
+        "eval.gemini.smoke.yaml",
+        "eval.openai.smoke.yaml",
+    ],
+)
+def test_readme_documents_multi_provider_release(required: str) -> None:
+    assert required in (ROOT / "README.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("field", ["provider_backend", "cost_source", "provider_reported"])
+def test_contract_docs_explain_additive_optional_release_fields(field: str) -> None:
+    content = (ROOT / "docs/contracts.md").read_text(encoding="utf-8")
+    assert 'schema_version: "0.1"' in content
+    assert "0.2.0" in content
+    assert "optional" in content
+    assert field in content
+
+
+def test_multi_provider_release_notes_and_changelog_exist() -> None:
+    notes = ROOT / "docs/releases/0.2.0.md"
+    assert notes.is_file()
+    content = notes.read_text(encoding="utf-8")
+    for required in ("0.2.0", "OpenRouter", "Gemini", "OpenAI", "0.1"):
+        assert required in content
+    assert "## 0.2.0" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
 
 
 def test_public_package_metadata_is_complete() -> None:
