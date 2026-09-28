@@ -118,7 +118,14 @@ async def test_optional_metadata_never_breaks_text(adapter, respx_mock, metadata
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "response", ["invalid-json", "{}", '{"choices": []}', '{"choices": [{"message": {}}]}']
+    "response",
+    [
+        "invalid-json",
+        "{}",
+        '{"choices": []}',
+        '{"choices": [{"message": {}}]}',
+        '{"choices": [{"message": {"content": null}}]}',
+    ],
 )
 async def test_malformed_responses_are_safe(adapter, respx_mock, response):
     respx_mock.post(URL).mock(return_value=httpx.Response(200, text=response))

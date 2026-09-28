@@ -57,6 +57,8 @@ class OpenAICompatibleProvider:
                 content = data["choices"][0]["message"]["content"]
             except (ValueError, KeyError, IndexError, TypeError):
                 raise ProviderError("malformed provider response", kind="response") from None
+            if not isinstance(content, str):
+                raise ProviderError("malformed provider response", kind="response")
             usage = data.get("usage")
             if not isinstance(usage, dict):
                 usage = {}
