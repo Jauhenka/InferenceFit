@@ -20,17 +20,23 @@ def adapter():
     def create():
         assert hasattr(providers, "OpenRouterProvider"), "OpenRouter adapter must be exported"
         return providers.OpenRouterProvider("secret-token")
+
     return create
 
 
 def candidate():
-    return CandidateSpec(id="router", provider="openrouter", model="vendor/native-model",
-                         parameters={"temperature": 0.3, "provider": {"order": ["Example"]}})
+    return CandidateSpec(
+        id="router",
+        provider="openrouter",
+        model="vendor/native-model",
+        parameters={"temperature": 0.3, "provider": {"order": ["Example"]}},
+    )
 
 
 def case():
-    return Case.model_validate({"id": "c", "request": {
-        "messages": [{"role": "user", "content": "hello"}]}})
+    return Case.model_validate(
+        {"id": "c", "request": {"messages": [{"role": "user", "content": "hello"}]}}
+    )
 
 
 def body(**metadata):
@@ -39,20 +45,38 @@ def body(**metadata):
 
 @pytest.mark.asyncio
 async def test_native_request_and_reported_metadata(adapter, respx_mock):
-    route = respx_mock.post(URL).mock(return_value=httpx.Response(200, json=body(
-        model="vendor/actual-model", provider="Example",
-        usage={"prompt_tokens": 2, "completion_tokens": 3, "total_tokens": 5, "cost": 0.0012})))
+    route = respx_mock.post(URL).mock(
+        return_value=httpx.Response(
+            200,
+            json=body(
+                model="vendor/actual-model",
+                provider="Example",
+                usage={
+                    "prompt_tokens": 2,
+                    "completion_tokens": 3,
+                    "total_tokens": 5,
+                    "cost": 0.0012,
+                },
+            ),
+        )
+    )
     result = await adapter().complete(candidate(), case(), 0)
     request = route.calls[0].request
     assert request.headers["Authorization"] == "Bearer secret-token"
     assert request.headers["X-OpenRouter-Metadata"] == "enabled"
     assert json.loads(request.content) == {
-        "model": "vendor/native-model", "messages": [{"role": "user", "content": "hello"}],
-        "temperature": 0.3, "provider": {"order": ["Example"]}}
+        "model": "vendor/native-model",
+        "messages": [{"role": "user", "content": "hello"}],
+        "temperature": 0.3,
+        "provider": {"order": ["Example"]},
+    }
     assert result.raw_output == "answer"
     assert (result.input_tokens, result.output_tokens, result.total_tokens) == (2, 3, 5)
     assert (result.provider, result.model, result.provider_backend) == (
-        "openrouter", "vendor/actual-model", "Example")
+        "openrouter",
+        "vendor/actual-model",
+        "Example",
+    )
     assert result.cost_usd == 0.0012
 
 
@@ -64,13 +88,24 @@ async def test_reported_cost_including_zero_is_preserved(adapter, respx_mock, co
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("metadata", [
-    {}, {"usage": None, "provider": None, "model": None},
-    {"usage": [], "provider": {}, "model": []},
-    {"usage": {"cost": "bad", "prompt_tokens": "bad", "completion_tokens": -1,
-               "total_tokens": []}, "provider": ""},
-    *[{"usage": {"cost": cost}} for cost in [True, -1, float("inf"), float("nan"), {}]],
-])
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {},
+        {"usage": None, "provider": None, "model": None},
+        {"usage": [], "provider": {}, "model": []},
+        {
+            "usage": {
+                "cost": "bad",
+                "prompt_tokens": "bad",
+                "completion_tokens": -1,
+                "total_tokens": [],
+            },
+            "provider": "",
+        },
+        *[{"usage": {"cost": cost}} for cost in [True, -1, float("inf"), float("nan"), {}]],
+    ],
+)
 async def test_optional_metadata_never_breaks_text(adapter, respx_mock, metadata):
     # JSON containing NaN is accepted by Python's decoder, allowing defensive coverage.
     respx_mock.post(URL).mock(return_value=httpx.Response(200, text=json.dumps(body(**metadata))))
@@ -82,8 +117,9 @@ async def test_optional_metadata_never_breaks_text(adapter, respx_mock, metadata
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("response", ["invalid-json", "{}", '{"choices": []}',
-    '{"choices": [{"message": {}}]}'])
+@pytest.mark.parametrize(
+    "response", ["invalid-json", "{}", '{"choices": []}', '{"choices": [{"message": {}}]}']
+)
 async def test_malformed_responses_are_safe(adapter, respx_mock, response):
     respx_mock.post(URL).mock(return_value=httpx.Response(200, text=response))
     with pytest.raises(ProviderError) as caught:
@@ -94,9 +130,15 @@ async def test_malformed_responses_are_safe(adapter, respx_mock, response):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("status,kind,retryable", [
-    (401, "authentication", False), (403, "permission", False),
-    (429, "rate_limit", True), (503, "server", True)])
+@pytest.mark.parametrize(
+    "status,kind,retryable",
+    [
+        (401, "authentication", False),
+        (403, "permission", False),
+        (429, "rate_limit", True),
+        (503, "server", True),
+    ],
+)
 async def test_http_errors_are_classified_and_redacted(
     adapter, respx_mock, status, kind, retryable
 ):
@@ -109,8 +151,9 @@ async def test_http_errors_are_classified_and_redacted(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("exception,kind", [(httpx.ReadTimeout, "timeout"),
-                                           (httpx.ConnectError, "network")])
+@pytest.mark.parametrize(
+    "exception,kind", [(httpx.ReadTimeout, "timeout"), (httpx.ConnectError, "network")]
+)
 async def test_transport_errors_are_safe_and_retryable(adapter, respx_mock, exception, kind):
     respx_mock.post(URL).mock(side_effect=exception("secret-token"))
     with pytest.raises(ProviderError) as caught:
