@@ -7,12 +7,35 @@ from types import SimpleNamespace
 
 import pytest
 import yaml
+from httpx import ASGITransport, AsyncClient
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import installed_distribution_smoke as smoke  # noqa: E402
 import verify_artifact_install as verifier  # noqa: E402
+
+
+async def test_api_reports_current_release_version():
+    from inferencefit.api import app
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        health = await client.get("/health")
+        assert health.json() == {"status": "ok", "version": "0.2.0"}
+        schema = await client.get("/openapi.json")
+        assert schema.json()["info"]["version"] == "0.2.0"
+
+
+async def test_fixture_manifest_reports_current_release_version(tmp_path):
+    from inferencefit import benchmark
+
+    spec_path = smoke.write_fixture_workload(tmp_path)
+    result = await benchmark(spec_path, output_root=tmp_path / "runs")
+    manifest = json.loads(
+        (tmp_path / "runs" / result.run_id / "manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["inferencefit_version"] == "0.2.0"
+    assert manifest["schema_version"] == "0.1"
 
 
 def test_assert_import_is_outside_source_tree_rejects_editable_import(tmp_path):

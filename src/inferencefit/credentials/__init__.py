@@ -10,7 +10,9 @@ from inferencefit.errors import MissingCredentialError
 _FALLBACKS = {
     "deepseek": "DEEPSEEK_API_KEY",
     "fireworks": "FIREWORKS_API_KEY",
-    "openrouter": "OPENROUTER_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "openrouter": "OPEN_ROUTER_API_KEY",
 }
 
 

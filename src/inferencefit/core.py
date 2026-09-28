@@ -21,7 +21,7 @@ from inferencefit.optimization import (
     rank_summaries,
     simulate_cascade,
 )
-from inferencefit.providers import FixtureProvider, OpenAICompatibleProvider
+from inferencefit.providers import create_provider
 from inferencefit.reporting import render_markdown
 from inferencefit.spec import load_evaluation_spec
 from inferencefit.storage import FilesystemArtifactStore
@@ -45,6 +45,9 @@ async def benchmark(
     output_root: str | Path = ".inferencefit/runs",
     run_id: str | None = None,
 ) -> ResultBundle:
+    # The public package imports core before publishing its version.
+    from inferencefit import __version__
+
     loaded = load_evaluation_spec(spec_path)
     spec = loaded.spec
     dataset = load_jsonl_dataset(loaded.resolve_dataset_path())
@@ -55,13 +58,12 @@ async def benchmark(
     started = datetime.now(UTC)
 
     resolver = EnvironmentCredentialResolver()
-    providers = {}
-    for candidate in spec.candidates:
-        if candidate.provider == "fixture":
-            providers[candidate.id] = FixtureProvider(loaded.source_path.parent)
-        else:
-            credential = resolver.resolve(candidate.credential_ref, candidate.provider)
-            providers[candidate.id] = OpenAICompatibleProvider(credential)
+    providers = {
+        candidate.id: create_provider(
+            candidate, spec_dir=loaded.source_path.parent, resolver=resolver
+        )
+        for candidate in spec.candidates
+    }
 
     if resume:
         active_run_id = resume
@@ -75,14 +77,21 @@ async def benchmark(
         active_run_id = run_id or new_run_id()
         run_dir = store.create(active_run_id)
         existing = []
-        store.atomic_yaml(run_dir / "spec.yaml", spec_dump)
+        store.atomic_yaml(
+            run_dir / "spec.yaml",
+            spec.model_dump(
+                mode="json",
+                exclude_none=True,
+                exclude={"candidates": {"__all__": {"credential_ref"}}},
+            ),
+        )
         (run_dir / "dataset.jsonl").write_text(
             loaded.resolve_dataset_path().read_text(encoding="utf-8"), encoding="utf-8"
         )
 
     manifest = {
         "schema_version": "0.1",
-        "inferencefit_version": "0.1.0",
+        "inferencefit_version": __version__,
         "run_id": active_run_id,
         "started_at": started.isoformat(),
         "spec_hash": spec_hash,

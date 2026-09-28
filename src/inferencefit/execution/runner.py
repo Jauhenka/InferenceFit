@@ -53,6 +53,12 @@ async def _execute(
             except json.JSONDecodeError:
                 parsed = None
             validation = evaluate_validators(spec.validators, case, response.raw_output)
+            cost_usd = response.cost_usd
+            cost_source = "provider_reported" if cost_usd is not None else None
+            if cost_usd is None:
+                cost_usd = _cost(candidate, response.input_tokens, response.output_tokens)
+                if cost_usd is not None:
+                    cost_source = "configured_pricing"
             return Observation(
                 case_id=case.id,
                 candidate_id=candidate.id,
@@ -61,10 +67,16 @@ async def _execute(
                 raw_output=response.raw_output,
                 parsed_output=parsed,
                 usage=TokenUsage(
-                    input_tokens=response.input_tokens, output_tokens=response.output_tokens
+                    input_tokens=response.input_tokens,
+                    output_tokens=response.output_tokens,
+                    total_tokens=response.total_tokens,
                 ),
                 latency_ms=response.latency_ms,
-                cost_usd=_cost(candidate, response.input_tokens, response.output_tokens),
+                cost_usd=cost_usd,
+                cost_source=cost_source,
+                provider=response.provider,
+                model=response.model,
+                provider_backend=response.provider_backend,
                 provider_attempts=attempts,
                 validation=validation,
             )

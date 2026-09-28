@@ -14,6 +14,9 @@ class ProviderResponse:
     output_tokens: int | None = None
     provider: str | None = None
     model: str | None = None
+    total_tokens: int | None = None
+    cost_usd: float | None = None
+    provider_backend: str | None = None
 
 
 class ProviderError(Exception):

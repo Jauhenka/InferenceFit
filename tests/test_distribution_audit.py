@@ -160,6 +160,8 @@ def test_secret_like_content_is_rejected() -> None:
         "sk-example123456",
         'DEEPSEEK_API_KEY = "your-api-key-here"',
         "OPENROUTER_API_KEY='placeholder'",
+        "OPEN_ROUTER_API_KEY='placeholder'",
+        'GEMINI_API_KEY = "your-api-key-here"',
         'INFERENCEFIT_CREDENTIAL_ROUTER_TOKEN = "redacted"',
     ],
 )
@@ -187,18 +189,25 @@ def test_provider_key_assignment_is_rejected_from_archive(tmp_path: Path) -> Non
     [
         ("DEEPSEEK" + "_API_KEY", "deepseek-real-secret-value-123456"),
         ("OPENROUTER" + "_API_KEY", "openrouter-real-secret-value-123456"),
+        ("OPEN_ROUTER" + "_API_KEY", "router-real-secret-value-123456"),
+        ("GEMINI" + "_API_KEY", "gemini-real-secret-value-123456"),
+        ("OPENAI" + "_API_KEY", "openai-real-secret-value-123456"),
         (
             "INFERENCEFIT" + "_CREDENTIAL_ROUTER_TOKEN",
             "router-real-secret-value-123456",
         ),
     ],
 )
+@pytest.mark.parametrize("artifact", ["wheel", "sdist"])
 def test_release_credential_assignment_is_rejected_from_archive(
-    tmp_path: Path, name: str, value: str
+    tmp_path: Path, name: str, value: str, artifact: str
 ) -> None:
     dist = write_valid_distribution(tmp_path)
     credential = f'{name} = "{value}"\n'
-    write_wheel(dist / WHEEL_NAME, {"inferencefit/settings.py": credential})
+    if artifact == "wheel":
+        write_wheel(dist / WHEEL_NAME, {"inferencefit/settings.py": credential})
+    else:
+        write_sdist(dist / SDIST_NAME, extra_members={"src/inferencefit/settings.py": credential})
 
     with pytest.raises(audit.AuditError, match="secret-like"):
         audit.audit_distribution(dist, expected_version="0.1.0")

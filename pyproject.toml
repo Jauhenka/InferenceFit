@@ -84,8 +84,11 @@ exclude = [
 minversion = "8.0"
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-ra"
+addopts = "-ra -m 'not provider_live'"
 asyncio_mode = "auto"
+markers = [
+    "provider_live: opt-in tests selected with -m provider_live that make real provider requests when the matching key is set",
+]
 
 [tool.ruff]
 line-length = 100

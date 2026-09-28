@@ -1,0 +1,23 @@
+schema_version: "0.1"
+dataset:
+  path: dataset.smoke.jsonl
+candidates:
+  - id: gemini-flash-lite
+    provider: gemini
+    model: gemini-3.5-flash-lite
+    credential_ref: gemini-main
+    parameters:
+      temperature: 0
+      max_tokens: 32
+validators:
+  - id: exact-units
+    type: exact
+    target: /units
+    reference: /units
+optimization:
+  objective: max_quality
+execution:
+  repetitions: 1
+  concurrency: 1
+  retry:
+    max_attempts: 1
