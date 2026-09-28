@@ -12,6 +12,11 @@ def load_pyproject() -> dict:
     return tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
 
+def test_default_pytest_run_excludes_live_provider_requests() -> None:
+    addopts = load_pyproject()["tool"]["pytest"]["ini_options"]["addopts"]
+    assert "not provider_live" in addopts
+
+
 def test_release_version_has_one_maintained_source() -> None:
     config = load_pyproject()
     assert "version" not in config["project"]
@@ -51,7 +56,17 @@ def test_readme_documents_multi_provider_release(required: str) -> None:
     assert required in (ROOT / "README.md").read_text(encoding="utf-8")
 
 
-@pytest.mark.parametrize("field", ["provider_backend", "cost_source", "provider_reported"])
+@pytest.mark.parametrize(
+    "field",
+    [
+        "provider",
+        "model",
+        "provider_backend",
+        "cost_source",
+        "total_tokens",
+        "provider_reported",
+    ],
+)
 def test_contract_docs_explain_additive_optional_release_fields(field: str) -> None:
     content = (ROOT / "docs/contracts.md").read_text(encoding="utf-8")
     assert 'schema_version: "0.1"' in content
@@ -66,6 +81,8 @@ def test_multi_provider_release_notes_and_changelog_exist() -> None:
     content = notes.read_text(encoding="utf-8")
     for required in ("0.2.0", "OpenRouter", "Gemini", "OpenAI", "0.1"):
         assert required in content
+    for field in ("provider", "model", "provider_backend", "cost_source", "usage.total_tokens"):
+        assert f"`{field}`" in content
     assert "## 0.2.0" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
 
 

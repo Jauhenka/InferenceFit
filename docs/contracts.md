@@ -4,14 +4,18 @@ EvaluationSpec, TestCase, Observation, ResultBundle, and RoutingPolicy are langu
 
 ## Additive fields in 0.2.0
 
-Package release 0.2.0 retains `schema_version: "0.1"`. `Observation` adds two optional,
-nullable fields, each defaulting to `null` when absent in older observation records:
+Package release 0.2.0 retains `schema_version: "0.1"`. `Observation` adds five optional,
+nullable keys, each defaulting to `null` when absent in older observation records:
 
+- `provider`: the configured provider integration that produced the response.
+- `model`: the actual response model ID reported by the provider, when available.
 - `provider_backend`: the serving backend reported by OpenRouter, when available. This is
   separate from `provider` (the configured integration) and `model` (the response model ID).
 - `cost_source`: `"provider_reported"` for a valid, non-negative finite request cost returned
   by the provider, or `"configured_pricing"` when cost is computed from the candidate's
   configured token prices. It is `null` when cost is unknown.
+- `usage.total_tokens`: the provider-reported total token count, retained independently of the
+  existing input and output token counts when available.
 
 Provider-reported `cost_usd`, including zero, takes precedence over configured pricing.
 Without a usable reported cost, estimation requires both input/output token counts and both
