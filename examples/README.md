@@ -1,6 +1,19 @@
 # Examples
 
-Run examples from a source checkout with InferenceFit 0.2.0 installed.
+Run examples from a source checkout with InferenceFit 0.2.1 installed.
+
+For a new workload, the built-in preset projects are usually the faster starting point:
+
+```bash
+inferencefit presets
+inferencefit init --preset structured-extraction ./eval
+inferencefit benchmark ./eval/eval.yaml
+```
+
+The `coding`, `document-processing`, and `structured-extraction` presets run offline with synthetic
+fixture data. Replace those cases and the fixture candidate before making a model-selection
+decision. Their generated READMEs explain workload-specific customization; this index continues to
+cover the hand-maintained compatibility and provider examples below.
 
 | Example | Purpose | Credential |
 | --- | --- | --- |

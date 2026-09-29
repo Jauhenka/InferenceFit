@@ -22,13 +22,13 @@ def test_release_version_has_one_maintained_source() -> None:
     assert "version" not in config["project"]
     assert config["project"]["dynamic"] == ["version"]
     assert config["tool"]["hatch"]["version"]["path"] == "src/inferencefit/__init__.py"
-    assert inferencefit.__version__ == "0.2.0"
+    assert inferencefit.__version__ == "0.2.1"
 
 
 @pytest.mark.parametrize(
     "required",
     [
-        "InferenceFit 0.2.0",
+        "InferenceFit 0.2.1",
         "Fireworks",
         "DeepSeek",
         "OpenRouter",
@@ -84,6 +84,62 @@ def test_multi_provider_release_notes_and_changelog_exist() -> None:
     for field in ("provider", "model", "provider_backend", "cost_source", "usage.total_tokens"):
         assert f"`{field}`" in content
     assert "## 0.2.0" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "required",
+    [
+        "pip install inferencefit",
+        "inferencefit presets",
+        "inferencefit init --preset structured-extraction ./eval",
+        "inferencefit skill path",
+        "coding",
+        "document-processing",
+        "structured-extraction",
+        "representative production examples",
+        "same core",
+        "docs/releases/0.2.1.md",
+        "docs/releases/0.2.0.md",
+        "docs/releases/0.1.0.md",
+    ],
+)
+def test_readme_documents_agent_ux_fast_path_and_history(required: str) -> None:
+    assert required in (ROOT / "README.md").read_text(encoding="utf-8")
+
+
+def test_agent_ux_release_notes_and_changelog_are_scoped() -> None:
+    notes = ROOT / "docs" / "releases" / "0.2.1.md"
+    assert notes.is_file()
+    content = " ".join(notes.read_text(encoding="utf-8").lower().split())
+    changelog = " ".join(
+        (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").lower().split()
+    )
+
+    for required in (
+        "coding",
+        "document-processing",
+        "structured-extraction",
+        "inferencefit presets",
+        "inferencefit init",
+        "inferencefit skill path",
+        "non-overwrite",
+        "schema_version",
+        "provider",
+        "engine",
+        "semantic judge",
+        "skill install",
+    ):
+        assert required in content
+    assert "## 0.2.1" in changelog
+    assert "docs/releases/0.2.1.md" in changelog
+    assert "## 0.2.0" in changelog and "## 0.1.0" in changelog
+
+
+def test_release_guide_uses_current_rehearsal_and_tag_examples() -> None:
+    content = (ROOT / "docs" / "releasing.md").read_text(encoding="utf-8")
+    assert "inferencefit==0.2.1" in content
+    assert "v0.2.1" in content
+    assert "READY_FOR_0.2.1" in content
 
 
 def test_public_package_metadata_is_complete() -> None:

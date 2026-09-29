@@ -6,7 +6,7 @@ test cases against candidate providers and models, measures quality, reliability
 use, and cost, applies your hard constraints, and produces a deterministic recommendation and an
 open routing policy.
 
-InferenceFit 0.2.0 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
+InferenceFit 0.2.1 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
 
 ## Installation
 
@@ -15,6 +15,41 @@ InferenceFit requires Python 3.11 or newer.
 ```bash
 pip install inferencefit
 ```
+
+## Workload preset quick start
+
+Discover the three built-in workload shapes and initialize the closest one:
+
+```bash
+inferencefit presets
+inferencefit init --preset structured-extraction ./eval
+inferencefit validate ./eval/eval.yaml
+inferencefit benchmark ./eval/eval.yaml
+```
+
+The stable preset IDs are `coding`, `document-processing`, and `structured-extraction`. Each
+generated project contains two synthetic cases and a deterministic offline fixture candidate, so
+the first benchmark checks installation and evaluation plumbing without credentials or network
+requests.
+
+Replace the sample cases with representative production examples before using the benchmark for
+model-selection decisions. Replace the fixture candidate with configurations you actually want to
+evaluate, then review validators, constraints, pricing, and execution limits. Initialization never
+overwrites an existing destination.
+
+## Agent Skill
+
+InferenceFit 0.2.1 also packages a portable Agent Skill for agents that prepare or interpret
+workload-specific evaluations. Locate it with:
+
+```bash
+inferencefit skill path
+```
+
+Copy or link the printed `inferencefit` directory into a skills directory supported by your agent,
+following that agent's own installation instructions. There is deliberately no universal skill
+installer in this release. The Agent Skill is another frontend over the same core workflow used by
+the CLI, Python API, and local daemon; it does not introduce a separate benchmark engine.
 
 ## Offline quick start
 
@@ -179,14 +214,14 @@ do not expose it to a network.
 
 ## Current limitations
 
-Version 0.2.0 uses a local process job manager and filesystem artifact store. It supports
+Version 0.2.1 uses a local process job manager and filesystem artifact store. It supports
 non-streaming chat completions and OpenAI Responses text output, a single two-stage fallback,
 and Python only. Cost uses reported request cost where available, then static configured prices;
 it is not an invoice reconciliation system. Exact validators intentionally do not provide
 semantic-equivalence scoring. There is no hosted Cloud/SaaS service, account system, traffic proxy,
 browser UI, distributed worker system, learned routing, or model training.
 
-## Roadmap (not available in 0.2.0)
+## Roadmap (not available in 0.2.1)
 
 Potential future work includes richer request modalities, more provider-specific metadata,
 scalable artifact-store adapters, and additional language SDKs. These are directions, not current
@@ -219,7 +254,9 @@ Detailed references:
 
 - [Architecture](docs/architecture.md)
 - [Serialized contracts](docs/contracts.md)
+- [0.2.1 release notes](docs/releases/0.2.1.md)
 - [0.2.0 release notes](docs/releases/0.2.0.md)
+- [0.1.0 release notes](docs/releases/0.1.0.md)
 - [E0.5 real-world validation](docs/e0.5-real-world-validation.md)
 
 ## License
