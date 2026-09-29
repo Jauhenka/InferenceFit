@@ -2,13 +2,63 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
 from inferencefit.core import benchmark as run_benchmark
+from inferencefit.presets import UnknownPresetError, list_presets
+from inferencefit.presets.project import PresetDestinationError, initialize_project
 from inferencefit.spec import load_evaluation_spec
 
 app = typer.Typer(no_args_is_help=True, help="Workload-specific LLM benchmarking.")
+
+
+@app.command("presets")
+def presets_command() -> None:
+    """List the built-in workload presets."""
+
+    for preset in list_presets():
+        typer.echo(f"{preset.identifier}: {preset.description}")
+
+
+@app.command("init")
+def init_command(
+    destination: Annotated[Path, typer.Argument(metavar="DESTINATION")],
+    preset: Annotated[
+        str,
+        typer.Option("--preset", help="Built-in workload preset identifier."),
+    ],
+) -> None:
+    """Create a starter benchmark project from a built-in preset."""
+
+    target = destination.expanduser().absolute()
+    try:
+        created = initialize_project(preset, target)
+    except UnknownPresetError:
+        typer.echo(
+            f"Unknown preset '{preset}'. Run 'inferencefit presets' to list available presets.",
+            err=True,
+        )
+        raise typer.Exit(code=2) from None
+    except PresetDestinationError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(code=2) from None
+    except Exception as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(code=1) from None
+
+    typer.echo(f"Initialized {preset} preset at {target}")
+    typer.echo("Created:")
+    for path in created:
+        typer.echo(f"  {path.relative_to(target).as_posix()}")
+    typer.echo(
+        "Replace the sample cases with representative production examples before using the "
+        "benchmark for model-selection decisions."
+    )
+    typer.echo("Replace the fixture candidate with the models you actually want to evaluate.")
+    typer.echo("Next:")
+    typer.echo(f"  inferencefit benchmark {target / 'eval.yaml'}")
 
 
 @app.command("validate")
