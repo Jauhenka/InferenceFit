@@ -6,12 +6,23 @@ from typing import Annotated
 
 import typer
 
+from inferencefit.agent_skill import canonical_skill_path
 from inferencefit.core import benchmark as run_benchmark
 from inferencefit.presets import UnknownPresetError, list_presets
 from inferencefit.presets.project import PresetDestinationError, initialize_project
 from inferencefit.spec import load_evaluation_spec
 
 app = typer.Typer(no_args_is_help=True, help="Workload-specific LLM benchmarking.")
+
+skill_app = typer.Typer(no_args_is_help=True, help="Locate the packaged Agent Skill.")
+app.add_typer(skill_app, name="skill")
+
+
+@skill_app.command("path")
+def skill_path_command() -> None:
+    """Print the absolute path to the canonical Agent Skill directory."""
+
+    typer.echo(str(canonical_skill_path()))
 
 
 @app.command("presets")

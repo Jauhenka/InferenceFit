@@ -164,3 +164,54 @@ def test_init_destination_error_is_still_reported(
     assert result.stdout == ""
     assert "already exists" in result.stderr
     assert "Traceback" not in result.stderr
+
+
+EXPECTED_SKILL_REFERENCES = {
+    "presets.md",
+    "validators.md",
+    "interpreting-results.md",
+}
+
+
+def test_root_help_lists_skill_command() -> None:
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "skill" in result.stdout
+
+
+def test_skill_help_lists_path_command() -> None:
+    result = runner.invoke(app, ["skill", "--help"])
+    assert result.exit_code == 0
+    assert "path" in result.stdout
+
+
+def test_skill_path_prints_one_absolute_directory() -> None:
+    result = runner.invoke(app, ["skill", "path"])
+
+    assert result.exit_code == 0
+    assert result.stderr == ""
+
+    lines = [line for line in result.stdout.splitlines() if line.strip()]
+    assert len(lines) == 1, f"expected exactly one printed path, got: {lines!r}"
+
+    skill_dir = Path(lines[0].strip())
+    assert skill_dir.is_absolute()
+    assert skill_dir.is_dir()
+
+    skill_file = skill_dir / "SKILL.md"
+    assert skill_file.is_file()
+    assert skill_file.read_text(encoding="utf-8").strip()
+
+    references = skill_dir / "references"
+    assert references.is_dir()
+    assert {path.name for path in references.glob("*.md")} == EXPECTED_SKILL_REFERENCES
+    for name in EXPECTED_SKILL_REFERENCES:
+        assert (references / name).read_text(encoding="utf-8").strip()
+
+
+def test_skill_path_matches_canonical_helper() -> None:
+    from inferencefit.agent_skill import canonical_skill_path
+
+    result = runner.invoke(app, ["skill", "path"])
+    assert result.exit_code == 0
+    assert result.stdout.strip() == str(canonical_skill_path().absolute())
