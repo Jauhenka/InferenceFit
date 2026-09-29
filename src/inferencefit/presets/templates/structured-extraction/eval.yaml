@@ -1,0 +1,44 @@
+schema_version: "0.1"
+dataset:
+  path: cases.jsonl
+candidates:
+  - id: offline-fixture
+    provider: fixture
+    model: fixture
+    parameters:
+      fixture_path: fixtures/sample.jsonl
+validators:
+  - id: response-schema
+    type: json_schema
+    routing_gate: true
+    config:
+      schema:
+        type: object
+        required: [invoice_id, customer, total, currency]
+        additionalProperties: false
+        properties:
+          invoice_id: {type: string}
+          customer: {type: string}
+          total: {type: number}
+          currency: {type: string}
+  - id: record-exact
+    type: exact
+    target: ""
+    reference: ""
+constraints:
+  - id: require-success
+    metric: min_success_rate
+    threshold: 1.0
+  - id: require-no-provider-errors
+    metric: max_provider_error_rate
+    threshold: 0.0
+optimization:
+  objective: max_quality
+execution:
+  repetitions: 1
+  concurrency: 1
+  timeout_ms: 10000
+  retry:
+    max_attempts: 2
+    initial_backoff_ms: 10
+    max_backoff_ms: 100

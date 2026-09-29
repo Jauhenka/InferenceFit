@@ -1,0 +1,2 @@
+{"case_id":"doc-001","raw_output":"{\"label\":\"invoice\"}","latency_ms":10,"input_tokens":64,"output_tokens":6}
+{"case_id":"doc-002","raw_output":"{\"label\":\"resume\"}","latency_ms":11,"input_tokens":60,"output_tokens":6}

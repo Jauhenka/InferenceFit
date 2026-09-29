@@ -1,0 +1,2 @@
+{"case_id":"code-001","raw_output":"{\"code\":\"def add(a, b):\\n    return a + b\"}","latency_ms":12,"input_tokens":48,"output_tokens":16}
+{"case_id":"code-002","raw_output":"{\"code\":\"def slugify(text):\\n    return text.lower().replace(\\\" \\\", \\\"-\\\")\"}","latency_ms":14,"input_tokens":52,"output_tokens":20}
