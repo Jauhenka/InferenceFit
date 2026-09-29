@@ -141,6 +141,7 @@ def _member_name(raw: str) -> str:
         raise AuditError(f"invalid archive member path: {raw}")
     if (
         any(part in FORBIDDEN_COMPONENTS for part in parts)
+        or any(part.startswith(".venv") for part in parts)
         or name.endswith(FORBIDDEN_SUFFIXES)
         or "/docs/superpowers/" in f"/{name}/"
     ):

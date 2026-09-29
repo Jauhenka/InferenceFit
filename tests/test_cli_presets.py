@@ -130,9 +130,7 @@ def test_init_invalid_parent_exits_two(tmp_path: Path) -> None:
     assert not destination.exists()
 
 
-def test_init_unexpected_failure_exits_one(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_init_unexpected_failure_exits_one(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     destination = tmp_path / "project"
 
     def boom(preset_id: str, target: str | Path) -> tuple[Path, ...]:

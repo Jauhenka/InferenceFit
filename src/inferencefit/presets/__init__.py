@@ -49,9 +49,7 @@ _PRESETS: tuple[PresetDefinition, ...] = (
     ),
 )
 
-_BY_IDENTIFIER: dict[str, PresetDefinition] = {
-    preset.identifier: preset for preset in _PRESETS
-}
+_BY_IDENTIFIER: dict[str, PresetDefinition] = {preset.identifier: preset for preset in _PRESETS}
 
 
 def list_presets() -> tuple[PresetDefinition, ...]:

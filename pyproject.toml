@@ -69,6 +69,7 @@ exclude = [
     "/.superpowers",
     "/.tox",
     "/.venv",
+    "/.venv*",
     "/.vs",
     "/AGENTS.md",
     "/build",

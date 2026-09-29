@@ -36,11 +36,7 @@ SECRET_ASSIGNMENT = re.compile(
 
 
 def _relative_files(project: Path) -> set[str]:
-    return {
-        path.relative_to(project).as_posix()
-        for path in project.rglob("*")
-        if path.is_file()
-    }
+    return {path.relative_to(project).as_posix() for path in project.rglob("*") if path.is_file()}
 
 
 @pytest.mark.parametrize("preset", list_presets(), ids=lambda preset: preset.identifier)
@@ -82,9 +78,7 @@ def test_builtin_preset_contains_no_live_configuration_or_secret(preset, tmp_pat
     project = tmp_path / preset.identifier
     initialize_project(preset.identifier, project)
     source = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in project.rglob("*")
-        if path.is_file()
+        path.read_text(encoding="utf-8") for path in project.rglob("*") if path.is_file()
     )
 
     assert SECRET_ASSIGNMENT.search(source) is None

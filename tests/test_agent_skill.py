@@ -259,9 +259,7 @@ def test_skill_treats_local_python_validators_as_trusted_code() -> None:
 def test_skill_does_not_reference_nonexistent_commands() -> None:
     text = _combined_text()
     invoked = {
-        token
-        for token in CLI_INVOCATION.findall(text)
-        if token not in NON_COMMAND_FOLLOWERS
+        token for token in CLI_INVOCATION.findall(text) if token not in NON_COMMAND_FOLLOWERS
     }
     unknown = invoked - KNOWN_CLI_SUBCOMMANDS
     assert not unknown, f"skill references nonexistent CLI commands: {sorted(unknown)}"

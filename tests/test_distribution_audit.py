@@ -133,9 +133,7 @@ def write_valid_distribution(tmp_path: Path) -> Path:
 
 @pytest.mark.parametrize("artifact", ["wheel", "sdist"])
 @pytest.mark.parametrize("resource", PACKAGE_RESOURCE_MEMBERS)
-def test_packaged_resource_is_required(
-    tmp_path: Path, artifact: str, resource: str
-) -> None:
+def test_packaged_resource_is_required(tmp_path: Path, artifact: str, resource: str) -> None:
     dist = tmp_path / "dist"
     dist.mkdir()
     wheel_member = f"inferencefit/{resource}"
@@ -164,6 +162,7 @@ def test_packaged_resource_is_required(
         "pkg/.superpowers/sdd/progress.md",
         "pkg/.tox/py311/pyvenv.cfg",
         "pkg/.venv/pyvenv.cfg",
+        "pkg/.venv-testpypi/pyvenv.cfg",
         "pkg/.pytest_cache/v/cache/nodeids",
         "pkg/venv/pyvenv.cfg",
         "pkg/src/inferencefit/__pycache__/core.pyc",

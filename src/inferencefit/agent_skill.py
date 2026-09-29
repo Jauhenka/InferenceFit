@@ -37,14 +37,11 @@ def canonical_skill_path() -> Path:
     skill_file = skill_root / SKILL_FILE_NAME
     if not skill_file.is_file():
         raise RuntimeError(
-            f"Agent Skill entrypoint is missing: {skill_file}. "
-            "The packaged SKILL.md was not found."
+            f"Agent Skill entrypoint is missing: {skill_file}. The packaged SKILL.md was not found."
         )
 
     references = skill_root / "references"
-    missing = [
-        name for name in REQUIRED_REFERENCE_NAMES if not (references / name).is_file()
-    ]
+    missing = [name for name in REQUIRED_REFERENCE_NAMES if not (references / name).is_file()]
     if missing:
         raise RuntimeError(
             "Agent Skill references are missing: "

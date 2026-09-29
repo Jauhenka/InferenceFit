@@ -111,9 +111,7 @@ def test_agent_ux_release_notes_and_changelog_are_scoped() -> None:
     notes = ROOT / "docs" / "releases" / "0.2.1.md"
     assert notes.is_file()
     content = " ".join(notes.read_text(encoding="utf-8").lower().split())
-    changelog = " ".join(
-        (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").lower().split()
-    )
+    changelog = " ".join((ROOT / "CHANGELOG.md").read_text(encoding="utf-8").lower().split())
 
     for required in (
         "coding",
@@ -192,6 +190,7 @@ def test_sdist_excludes_internal_and_local_state() -> None:
         "/.inferencefit",
         "/.superpowers",
         "/.venv",
+        "/.venv*",
         "/AGENTS.md",
         "/docs/superpowers",
         "/dist",
