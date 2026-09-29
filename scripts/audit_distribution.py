@@ -71,8 +71,38 @@ SECRET_PATTERNS = (
         r"\s*=\s*['\"]?(?P<value>[^\s'\"]+)"
     ),
 )
+PACKAGE_RESOURCE_MEMBERS = frozenset(
+    {
+        "presets/templates/coding/README.md",
+        "presets/templates/coding/cases.jsonl",
+        "presets/templates/coding/eval.yaml",
+        "presets/templates/coding/fixtures/sample.jsonl",
+        "presets/templates/document-processing/README.md",
+        "presets/templates/document-processing/cases.jsonl",
+        "presets/templates/document-processing/eval.yaml",
+        "presets/templates/document-processing/fixtures/sample.jsonl",
+        "presets/templates/structured-extraction/README.md",
+        "presets/templates/structured-extraction/cases.jsonl",
+        "presets/templates/structured-extraction/eval.yaml",
+        "presets/templates/structured-extraction/fixtures/sample.jsonl",
+        "skills/inferencefit/SKILL.md",
+        "skills/inferencefit/references/interpreting-results.md",
+        "skills/inferencefit/references/presets.md",
+        "skills/inferencefit/references/validators.md",
+    }
+)
+WHEEL_PACKAGE_REQUIRED_MEMBERS = frozenset(
+    f"inferencefit/{name}" for name in PACKAGE_RESOURCE_MEMBERS
+)
 SDIST_REQUIRED_MEMBERS = frozenset(
-    {"pyproject.toml", "README.md", "LICENSE", "CHANGELOG.md", "src/inferencefit/__init__.py"}
+    {
+        "pyproject.toml",
+        "README.md",
+        "LICENSE",
+        "CHANGELOG.md",
+        "src/inferencefit/__init__.py",
+        *(f"src/inferencefit/{name}" for name in PACKAGE_RESOURCE_MEMBERS),
+    }
 )
 
 
@@ -188,7 +218,7 @@ def _audit_wheel(path: Path, expected_version: str | None) -> int:
         f"{dist_info}/entry_points.txt",
         f"{dist_info}/licenses/LICENSE",
         "inferencefit/__init__.py",
-    }
+    } | set(WHEEL_PACKAGE_REQUIRED_MEMBERS)
     with zipfile.ZipFile(path) as archive:
         infos = archive.infolist()
         names = _unique_names(info.filename for info in infos)

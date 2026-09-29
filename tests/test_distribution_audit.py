@@ -13,6 +13,25 @@ from scripts import audit_distribution as audit
 WHEEL_NAME = "inferencefit-0.1.0-py3-none-any.whl"
 SDIST_NAME = "inferencefit-0.1.0.tar.gz"
 
+PACKAGE_RESOURCE_MEMBERS = (
+    "presets/templates/coding/README.md",
+    "presets/templates/coding/cases.jsonl",
+    "presets/templates/coding/eval.yaml",
+    "presets/templates/coding/fixtures/sample.jsonl",
+    "presets/templates/document-processing/README.md",
+    "presets/templates/document-processing/cases.jsonl",
+    "presets/templates/document-processing/eval.yaml",
+    "presets/templates/document-processing/fixtures/sample.jsonl",
+    "presets/templates/structured-extraction/README.md",
+    "presets/templates/structured-extraction/cases.jsonl",
+    "presets/templates/structured-extraction/eval.yaml",
+    "presets/templates/structured-extraction/fixtures/sample.jsonl",
+    "skills/inferencefit/SKILL.md",
+    "skills/inferencefit/references/interpreting-results.md",
+    "skills/inferencefit/references/presets.md",
+    "skills/inferencefit/references/validators.md",
+)
+
 
 def write_wheel(
     path: Path,
@@ -22,6 +41,7 @@ def write_wheel(
     metadata_name: str = "inferencefit",
     metadata_version: str = "0.1.0",
     with_directories: bool = False,
+    omit_members: set[str] | None = None,
 ) -> None:
     members = {
         "inferencefit/__init__.py": '__version__ = "0.1.0"\n',
@@ -34,7 +54,15 @@ def write_wheel(
             "[console_scripts]\ninferencefit = inferencefit.cli:app\n"
         ),
     }
+    members.update(
+        {
+            f"inferencefit/{name}": f"packaged resource: {name}\n"
+            for name in PACKAGE_RESOURCE_MEMBERS
+        }
+    )
     members.update(extra_members or {})
+    for name in omit_members or set():
+        members.pop(name, None)
     with zipfile.ZipFile(path, "w") as archive:
         if with_directories:
             for directory in ("inferencefit", dist_info):
@@ -52,6 +80,7 @@ def write_sdist(
     link_target: str | None = None,
     hardlink_target: str | None = None,
     with_directories: bool = False,
+    omit_members: set[str] | None = None,
 ) -> None:
     members = {
         "PKG-INFO": pkg_info,
@@ -62,7 +91,15 @@ def write_sdist(
         "src/inferencefit/__init__.py": '__version__ = "0.1.0"\n',
         "tests/test_smoke.py": "def test_smoke(): pass\n",
     }
+    members.update(
+        {
+            f"src/inferencefit/{name}": f"packaged resource: {name}\n"
+            for name in PACKAGE_RESOURCE_MEMBERS
+        }
+    )
     members.update(extra_members or {})
+    for name in omit_members or set():
+        members.pop(name, None)
     with tarfile.open(path, "w:gz") as archive:
         if with_directories:
             for directory in ("", "src", "src/inferencefit", "tests"):
@@ -92,6 +129,28 @@ def write_valid_distribution(tmp_path: Path) -> Path:
     write_wheel(dist / WHEEL_NAME)
     write_sdist(dist / SDIST_NAME)
     return dist
+
+
+@pytest.mark.parametrize("artifact", ["wheel", "sdist"])
+@pytest.mark.parametrize("resource", PACKAGE_RESOURCE_MEMBERS)
+def test_packaged_resource_is_required(
+    tmp_path: Path, artifact: str, resource: str
+) -> None:
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    wheel_member = f"inferencefit/{resource}"
+    sdist_member = f"src/inferencefit/{resource}"
+    write_wheel(
+        dist / WHEEL_NAME,
+        omit_members={wheel_member} if artifact == "wheel" else None,
+    )
+    write_sdist(
+        dist / SDIST_NAME,
+        omit_members={sdist_member} if artifact == "sdist" else None,
+    )
+
+    with pytest.raises(audit.AuditError, match="missing required member"):
+        audit.audit_distribution(dist, expected_version="0.1.0")
 
 
 @pytest.mark.parametrize(
@@ -439,5 +498,9 @@ def test_clean_distribution_prints_deterministic_success_summary(
 
     output = capsys.readouterr().out.splitlines()
     assert output == sorted(output)
-    assert any(line.startswith(f"{SDIST_NAME}: ") and "bytes, 7 members" in line for line in output)
-    assert any(line.startswith(f"{WHEEL_NAME}: ") and "bytes, 5 members" in line for line in output)
+    assert any(
+        line.startswith(f"{SDIST_NAME}: ") and "bytes, 23 members" in line for line in output
+    )
+    assert any(
+        line.startswith(f"{WHEEL_NAME}: ") and "bytes, 21 members" in line for line in output
+    )
