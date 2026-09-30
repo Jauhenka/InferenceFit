@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from click import unstyle
 from typer.testing import CliRunner
 
 import inferencefit.cli as cli_module
@@ -66,10 +67,16 @@ def test_root_help_lists_presets_and_init() -> None:
 
 
 def test_init_help_documents_option_and_argument() -> None:
-    result = runner.invoke(app, ["init", "--help"])
+    result = runner.invoke(
+        app,
+        ["init", "--help"],
+        color=True,
+        env={"FORCE_COLOR": "1", "TERM": "xterm-256color"},
+    )
     assert result.exit_code == 0
-    assert "--preset" in result.stdout
-    assert "DESTINATION" in result.stdout
+    help_text = unstyle(result.stdout)
+    assert "--preset" in help_text
+    assert "DESTINATION" in help_text
 
 
 def test_init_success_output(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
