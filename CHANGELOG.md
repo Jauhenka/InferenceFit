@@ -2,6 +2,23 @@
 
 All notable changes to InferenceFit are documented in this file.
 
+## 0.2.1
+
+Agent UX and workload-presets release. See [0.2.1 release notes](docs/releases/0.2.1.md).
+
+- Add `coding`, `document-processing`, and `structured-extraction` starter projects with two
+  synthetic cases, deterministic validators, and an offline fixture candidate.
+- Add `inferencefit presets` and safe, non-overwriting
+  `inferencefit init --preset <id> <destination>` project creation.
+- Package a portable InferenceFit Agent Skill and expose its complete installed location with
+  `inferencefit skill path`.
+- Audit all preset and skill resources in wheels and source distributions and exercise them in
+  clean-install smoke tests.
+- Preserve `schema_version: "0.1"`, existing provider and benchmark-engine behavior, and the 0.2.0
+  multi-provider interfaces.
+- Defer a semantic judge, universal skill installer, provider/model rankings, and provider or
+  engine redesign.
+
 ## 0.2.0
 
 Multi-provider evaluation release.

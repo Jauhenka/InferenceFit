@@ -1,0 +1,2 @@
+{"case_id":"extract-001","raw_output":"{\"invoice_id\":\"INV-1001\",\"customer\":\"Acme Corp\",\"total\":42.5,\"currency\":\"USD\"}","latency_ms":13,"input_tokens":72,"output_tokens":24}
+{"case_id":"extract-002","raw_output":"{\"invoice_id\":\"INV-1002\",\"customer\":\"Globex Ltd\",\"total\":7.0,\"currency\":\"EUR\"}","latency_ms":12,"input_tokens":70,"output_tokens":22}

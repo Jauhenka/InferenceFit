@@ -1,0 +1,2 @@
+{"id":"code-001","request":{"messages":[{"role":"user","content":"Return a Python function add(a, b) that returns the sum as JSON {\"code\": \"...\"}."}]},"expected":{"code":"def add(a, b):\n    return a + b"},"metadata":{"language":"python"}}
+{"id":"code-002","request":{"messages":[{"role":"user","content":"Return a Python function slugify(text) that lowercases and replaces spaces with hyphens as JSON {\"code\": \"...\"}."}]},"expected":{"code":"def slugify(text):\n    return text.lower().replace(\" \", \"-\")"},"metadata":{"language":"python"}}

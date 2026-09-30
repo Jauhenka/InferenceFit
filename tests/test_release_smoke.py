@@ -21,9 +21,9 @@ async def test_api_reports_current_release_version():
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         health = await client.get("/health")
-        assert health.json() == {"status": "ok", "version": "0.2.0"}
+        assert health.json() == {"status": "ok", "version": "0.2.1"}
         schema = await client.get("/openapi.json")
-        assert schema.json()["info"]["version"] == "0.2.0"
+        assert schema.json()["info"]["version"] == "0.2.1"
 
 
 async def test_fixture_manifest_reports_current_release_version(tmp_path):
@@ -34,7 +34,7 @@ async def test_fixture_manifest_reports_current_release_version(tmp_path):
     manifest = json.loads(
         (tmp_path / "runs" / result.run_id / "manifest.json").read_text(encoding="utf-8")
     )
-    assert manifest["inferencefit_version"] == "0.2.0"
+    assert manifest["inferencefit_version"] == "0.2.1"
     assert manifest["schema_version"] == "0.1"
 
 
@@ -140,19 +140,19 @@ def test_verify_run_checked_includes_real_failing_subprocess_diagnostics(tmp_pat
         )
 
 
-def result_payload() -> dict:
+def result_payload(candidate_id: str = "fixture") -> dict:
     return {
         "schema_version": "0.1",
         "status": "completed",
         "candidate_summaries": [
             {
-                "id": "fixture",
+                "id": candidate_id,
                 "planned_count": 2,
                 "provider_success_count": 2,
                 "provider_error_count": 0,
             }
         ],
-        "recommendation": "fixture",
+        "recommendation": candidate_id,
     }
 
 
@@ -245,6 +245,99 @@ def test_console_script_path_is_adjacent_to_python(tmp_path, os_name, python_rel
     assert smoke.console_script_path(python_executable, os_name) == (
         python_executable.parent / script_name
     )
+
+
+def test_smoke_main_exercises_packaged_presets_and_skill(tmp_path, monkeypatch):
+    package_root = tmp_path / "site-packages" / "inferencefit"
+    package_root.mkdir(parents=True)
+    package_file = package_root / "__init__.py"
+    package_file.touch()
+    skill_dir = package_root / "skills" / "inferencefit"
+    references = skill_dir / "references"
+    references.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text("---\nname: inferencefit\n---\n", encoding="utf-8")
+    for name in ("presets.md", "validators.md", "interpreting-results.md"):
+        (references / name).write_text(f"# {name}\n", encoding="utf-8")
+
+    isolated_python = (
+        tmp_path / "isolated" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    )
+    isolated_python.parent.mkdir(parents=True)
+    isolated_python.touch()
+    executable = smoke.console_script_path(isolated_python, os.name)
+    executable.touch()
+    monkeypatch.setitem(
+        sys.modules,
+        "inferencefit",
+        SimpleNamespace(__version__="0.1.0", __file__=package_file),
+    )
+    monkeypatch.setattr(sys, "executable", str(isolated_python))
+    monkeypatch.setattr(smoke.shutil, "which", lambda _name: str(executable))
+
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+
+    class FixedTemporaryDirectory:
+        def __init__(self, **_kwargs):
+            pass
+
+        def __enter__(self):
+            return str(workdir)
+
+        def __exit__(self, *_args):
+            return False
+
+    monkeypatch.setattr(smoke.tempfile, "TemporaryDirectory", FixedTemporaryDirectory)
+    commands: list[list[str]] = []
+
+    def fake_run(command: list[str], cwd: Path):
+        assert cwd == workdir
+        commands.append(command)
+        args = command[1:]
+        if args == ["--help"]:
+            stdout = "Workload-specific LLM benchmarking\n"
+        elif args == ["presets"]:
+            stdout = "coding: x\ndocument-processing: x\nstructured-extraction: x\n"
+        elif args[:3] == ["init", "--preset", "structured-extraction"]:
+            preset = Path(args[3])
+            preset.mkdir()
+            (preset / "eval.yaml").write_text("schema_version: '0.1'\n", encoding="utf-8")
+            stdout = "initialized\n"
+        elif args and args[0] == "validate":
+            stdout = "Valid EvaluationSpec 0.1\n"
+        elif args and args[0] == "benchmark":
+            candidate = "offline-fixture" if "structured-extraction" in args[1] else "fixture"
+            run_dir = workdir / ".inferencefit" / "runs" / f"run-{candidate}"
+            run_dir.mkdir(parents=True)
+            (run_dir / "result.json").write_text(
+                json.dumps(result_payload(candidate)), encoding="utf-8"
+            )
+            stdout = "Provider successes/failures: 2/0\n"
+        elif args == ["skill", "path"]:
+            stdout = f"{skill_dir}\n"
+        else:
+            pytest.fail(f"unexpected command: {command}")
+        return subprocess.CompletedProcess(command, 0, stdout, "")
+
+    monkeypatch.setattr(smoke, "run_checked", fake_run)
+
+    assert smoke.main("0.1.0", None) == 0
+
+    expected_prefixes = [
+        ["--help"],
+        ["validate"],
+        ["benchmark"],
+        ["presets"],
+        ["init", "--preset", "structured-extraction"],
+        ["validate"],
+        ["benchmark"],
+        ["skill", "path"],
+    ]
+    actual_prefixes = [
+        command[1 : 1 + len(prefix)]
+        for command, prefix in zip(commands, expected_prefixes, strict=True)
+    ]
+    assert actual_prefixes == expected_prefixes
 
 
 def test_verify_main_uses_isolated_venv_and_prefixed_child_path(tmp_path, monkeypatch):

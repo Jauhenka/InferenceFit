@@ -108,7 +108,9 @@ def run_checked(command: list[str], cwd: Path) -> subprocess.CompletedProcess[st
         ) from error
 
 
-def assert_complete_fixture_result(result_path: Path) -> None:
+def assert_complete_fixture_result(
+    result_path: Path, expected_candidate_id: str = "fixture"
+) -> None:
     """Confirm the one result artifact is the expected two-case fixture run."""
     try:
         result = json.loads(result_path.read_text(encoding="utf-8"))
@@ -121,14 +123,39 @@ def assert_complete_fixture_result(result_path: Path) -> None:
         raise RuntimeError("result.json does not contain one fixture candidate summary")
     summary = summaries[0]
     if (
-        summary.get("id") != "fixture"
+        summary.get("id") != expected_candidate_id
         or summary.get("planned_count") != 2
         or summary.get("provider_success_count") != 2
         or summary.get("provider_error_count") != 0
     ):
         raise RuntimeError("result.json does not represent two successful fixture cases")
-    if result.get("recommendation") != "fixture":
-        raise RuntimeError("result.json recommendation is not fixture")
+    if result.get("recommendation") != expected_candidate_id:
+        raise RuntimeError(f"result.json recommendation is not {expected_candidate_id}")
+
+
+def assert_packaged_skill_path(output: str, package_root: Path) -> None:
+    """Confirm `skill path` points at a complete installed package resource."""
+
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    if len(lines) != 1:
+        raise RuntimeError(f"skill path did not print exactly one directory: {lines!r}")
+    skill_root = Path(lines[0]).resolve()
+    installed_root = package_root.resolve()
+    if not skill_root.is_relative_to(installed_root):
+        raise RuntimeError(f"skill path is outside the installed package: {skill_root}")
+    required = [
+        skill_root / "SKILL.md",
+        skill_root / "references" / "presets.md",
+        skill_root / "references" / "validators.md",
+        skill_root / "references" / "interpreting-results.md",
+    ]
+    for path in required:
+        try:
+            content = path.read_text(encoding="utf-8")
+        except OSError as error:
+            raise RuntimeError(f"packaged skill resource is unreadable: {path}: {error}") from error
+        if not content.strip():
+            raise RuntimeError(f"packaged skill resource is empty: {path}")
 
 
 def main(expected_version: str, source_root: Path | None) -> int:
@@ -169,6 +196,37 @@ def main(expected_version: str, source_root: Path | None) -> int:
         if len(results) != 1:
             raise RuntimeError(f"expected exactly one complete result.json, found {len(results)}")
         assert_complete_fixture_result(results[0])
+
+        presets_result = run_checked([executable, "presets"], workdir)
+        for preset_id in ("coding", "document-processing", "structured-extraction"):
+            if f"{preset_id}:" not in presets_result.stdout:
+                raise RuntimeError(f"preset listing is missing {preset_id}")
+
+        preset_dir = workdir / "structured-extraction"
+        run_checked(
+            [executable, "init", "--preset", "structured-extraction", str(preset_dir)],
+            workdir,
+        )
+        preset_spec = preset_dir / "eval.yaml"
+        preset_validation = run_checked([executable, "validate", str(preset_spec)], workdir)
+        if "Valid EvaluationSpec 0.1" not in preset_validation.stdout:
+            raise RuntimeError("generated preset validation did not succeed")
+        previous_results = set(results)
+        preset_benchmark = run_checked([executable, "benchmark", str(preset_spec)], workdir)
+        if "Provider successes/failures: 2/0" not in preset_benchmark.stdout:
+            raise RuntimeError("generated preset benchmark did not report two successes")
+        current_results = set((workdir / ".inferencefit" / "runs").glob("*/result.json"))
+        generated_results = current_results - previous_results
+        if len(generated_results) != 1:
+            raise RuntimeError(
+                f"expected one generated-preset result.json, found {len(generated_results)}"
+            )
+        assert_complete_fixture_result(
+            generated_results.pop(), expected_candidate_id="offline-fixture"
+        )
+
+        skill_result = run_checked([executable, "skill", "path"], workdir)
+        assert_packaged_skill_path(skill_result.stdout, Path(inferencefit.__file__).parent)
     return 0
 
 

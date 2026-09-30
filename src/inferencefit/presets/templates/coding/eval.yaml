@@ -1,0 +1,41 @@
+schema_version: "0.1"
+dataset:
+  path: cases.jsonl
+candidates:
+  - id: offline-fixture
+    provider: fixture
+    model: fixture
+    parameters:
+      fixture_path: fixtures/sample.jsonl
+validators:
+  - id: response-schema
+    type: json_schema
+    routing_gate: true
+    config:
+      schema:
+        type: object
+        required: [code]
+        additionalProperties: false
+        properties:
+          code: {type: string}
+  - id: code-exact
+    type: exact
+    target: /code
+    reference: /code
+constraints:
+  - id: require-success
+    metric: min_success_rate
+    threshold: 1.0
+  - id: require-no-provider-errors
+    metric: max_provider_error_rate
+    threshold: 0.0
+optimization:
+  objective: max_quality
+execution:
+  repetitions: 1
+  concurrency: 1
+  timeout_ms: 10000
+  retry:
+    max_attempts: 2
+    initial_backoff_ms: 10
+    max_backoff_ms: 100
