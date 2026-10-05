@@ -65,7 +65,8 @@ SECRET_PATTERNS = (
     re.compile(r"(?i)\bbearer\s+(?P<value>[a-z0-9._~+/=-]{20,})"),
     re.compile(r"\b(?P<value>sk-[A-Za-z0-9_-]{8,})"),
     re.compile(
-        r"(?im)\b(?:(?:OPENAI|ANTHROPIC|FIREWORKS|AZURE|GOOGLE|AWS|DEEPSEEK|OPENROUTER)_"
+        r"(?im)\b(?:(?:OPENAI|ANTHROPIC|FIREWORKS|AZURE|GOOGLE|AWS|DEEPSEEK|OPENROUTER|"
+        r"CHUTES|MORPHEUS|NOSANA)_"
         r"(?:API_)?(?:KEY|TOKEN|SECRET)|OPEN_ROUTER_API_KEY|GEMINI_API_KEY|"
         r"INFERENCEFIT_CREDENTIAL_[A-Z0-9_]+)"
         r"\s*=\s*['\"]?(?P<value>[^\s'\"]+)"

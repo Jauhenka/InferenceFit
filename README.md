@@ -6,7 +6,7 @@ test cases against candidate providers and models, measures quality, reliability
 use, and cost, applies your hard constraints, and produces a deterministic recommendation and an
 open routing policy.
 
-InferenceFit 0.2.2 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
+InferenceFit 0.2.3 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
 
 ## Installation
 
@@ -39,7 +39,7 @@ overwrites an existing destination.
 
 ## Agent Skill
 
-InferenceFit 0.2.2 also packages a portable Agent Skill for agents that prepare or interpret
+InferenceFit 0.2.3 also packages a portable Agent Skill for agents that prepare or interpret
 workload-specific evaluations. Locate it with:
 
 ```bash
@@ -96,6 +96,16 @@ inferencefit benchmark examples/lead_semantic_units/eval.gemini.smoke.yaml
 
 # Requires OPENAI_API_KEY
 inferencefit benchmark examples/lead_semantic_units/eval.openai.smoke.yaml
+
+# Replace <model-id> in each spec with a current native model ID first.
+# Requires CHUTES_API_KEY
+inferencefit benchmark examples/chutes/eval.yaml
+
+# Requires MORPHEUS_API_KEY
+inferencefit benchmark examples/morpheus/eval.yaml
+
+# Requires NOSANA_API_KEY
+inferencefit benchmark examples/nosana/eval.yaml
 ```
 
 These specs use synthetic lead-extraction cases. See the
@@ -158,6 +168,9 @@ The supported paths use non-streaming HTTP requests without vendor SDKs:
 | OpenRouter (`openrouter`) | Chat completions with reported cost and backend metadata | `OPEN_ROUTER_API_KEY` |
 | Gemini (`gemini`) | Google's OpenAI-compatible chat completions endpoint | `GEMINI_API_KEY` |
 | OpenAI (`openai`) | Native Responses API with `store: false` | `OPENAI_API_KEY` |
+| Chutes (`chutes`) | Hosted OpenAI-compatible Chutes inference gateway | `CHUTES_API_KEY` |
+| Morpheus (`morpheus`) | Hosted OpenAI-compatible Morpheus gateway | `MORPHEUS_API_KEY` |
+| Nosana (`nosana`) | Hosted OpenAI-compatible LLM inference | `NOSANA_API_KEY` |
 | Fixture (`fixture`) | Deterministic offline testing | None |
 | Ollama (`ollama`) and vLLM (`vllm`) | Local OpenAI-compatible chat completions | Optional explicit reference |
 | Generic OpenAI-compatible (`custom`) | Chat completions at an explicit `base_url` | Optional explicit reference |
@@ -168,8 +181,27 @@ providers fall back to their variables in the table. OpenRouter's exact name is
 `OPEN_ROUTER_API_KEY`; the older `OPENROUTER_API_KEY` spelling is not a resolver fallback.
 Credential values are never written to run artifacts.
 
-Minimal candidate configurations for the new providers can be placed under `candidates` in an
-evaluation spec with `schema_version: "0.1"` and a dataset of chat messages:
+### Decentralized inference providers
+
+The `chutes`, `morpheus`, and `nosana` identifiers select hosted OpenAI-compatible gateways backed
+by distributed inference infrastructure. They use the same benchmark workflow, shared adapter,
+Bearer credential handling, and artifact format as other chat providers. Set the matching key in
+the table, choose a **current native model ID**, and write `provider: chutes`, `provider:
+morpheus`, or `provider: nosana` with no `base_url`. The [Chutes](examples/chutes/README.md),
+[Morpheus](examples/morpheus/README.md), and [Nosana](examples/nosana/README.md) examples contain
+one bounded request each; replace `<model-id>` after checking the provider's current catalog.
+
+Chutes uses `https://llm.chutes.ai/v1`, whose public `/models` catalog changes. Morpheus uses the
+managed `https://api.mor.org/api/v1` gateway backed by its inference marketplace; this gateway is
+not an end-to-end attestation guarantee. Nosana uses `https://inference.nosana.com/v1`, whose
+authenticated `/models` list contains models currently served. The named integrations do not
+automatically discover models or prices during a benchmark. Configure `pricing` when you have a
+current rate and need an estimate; otherwise monetary cost remains unknown. An explicit `base_url`
+still overrides a named profile through the existing shared chat path. The adapter remains
+non-streaming and rejects `parameters.stream` before HTTP.
+
+Minimal candidate configurations for the existing hosted providers can be placed under
+`candidates` in an evaluation spec with `schema_version: "0.1"` and a dataset of chat messages:
 
 ```yaml
 candidates:
@@ -223,7 +255,7 @@ usage and configured `pricing` are available; unknown cost is not zero.
 Prefer a first-class provider adapter when one exists because it may normalize provider-specific
 behavior, metadata, or cost. For a local endpoint with a built-in profile, `provider: ollama` and
 `provider: vllm` remain available. An unknown provider name plus explicit `base_url` continues to
-run for backward compatibility, but that path is deprecated and warns in 0.2.2. New
+run for backward compatibility, but that path is deprecated and warns since 0.2.2. New
 configurations must use `provider: custom`. See the
 [generic example](examples/generic_openai_compatible/README.md) and
 [examples guide](examples/README.md).
@@ -240,14 +272,14 @@ do not expose it to a network.
 
 ## Current limitations
 
-Version 0.2.2 uses a local process job manager and filesystem artifact store. It supports
+Version 0.2.3 uses a local process job manager and filesystem artifact store. It supports
 non-streaming chat completions and OpenAI Responses text output, a single two-stage fallback,
 and Python only. Cost uses reported request cost where available, then static configured prices;
 it is not an invoice reconciliation system. Exact validators intentionally do not provide
 semantic-equivalence scoring. There is no hosted Cloud/SaaS service, account system, traffic proxy,
 browser UI, distributed worker system, learned routing, or model training.
 
-## Roadmap (not available in 0.2.2)
+## Roadmap (not available in 0.2.3)
 
 Potential future work includes richer request modalities, more provider-specific metadata,
 scalable artifact-store adapters, and additional language SDKs. These are directions, not current
@@ -274,12 +306,19 @@ python -m pytest tests/test_provider_live.py -m provider_live -q
 
 Each live check skips when its own key is absent. To override the bundled model defaults, set
 `OPEN_ROUTER_TEST_MODEL`, `GEMINI_TEST_MODEL`, or `OPENAI_TEST_MODEL` for the matching provider.
+The decentralized gateway checks use `CHUTES_TEST_MODEL`, `MORPHEUS_TEST_MODEL`, or
+`NOSANA_TEST_MODEL`. Chutes can select an inexpensive text model from one public `/models` read.
+Morpheus requires an explicit `MORPHEUS_TEST_MODEL` because its active-model catalog does not
+provide machine-readable prices. Nosana requires an explicit `NOSANA_TEST_MODEL`; its authenticated
+catalog confirms that the selected ID is currently served, but does not reliably distinguish
+chat-ready models from embedding or reasoning-only responses.
 Ordinary CI supplies no credentials and runs the offline suite.
 
 Detailed references:
 
 - [Architecture](docs/architecture.md)
 - [Serialized contracts](docs/contracts.md)
+- [0.2.3 release notes](docs/releases/0.2.3.md)
 - [0.2.2 release notes](docs/releases/0.2.2.md)
 - [0.2.1 release notes](docs/releases/0.2.1.md)
 - [0.2.0 release notes](docs/releases/0.2.0.md)

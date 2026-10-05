@@ -62,6 +62,32 @@ deprecated and warns in 0.2.2. New configurations use `provider: custom`. Named-
 `base_url` overrides still take precedence for 0.2.x compatibility and bypass provider-specific
 behavior on that route.
 
+## Named decentralized inference profiles in 0.2.3
+
+`chutes`, `morpheus`, and `nosana` use the same `CandidateSpec` and non-streaming
+`OpenAICompatibleProvider` as the generic chat route. Their respective default API bases are
+`https://llm.chutes.ai/v1`, `https://api.mor.org/api/v1`, and
+`https://inference.nosana.com/v1`. A normal candidate supplies its native `model` ID and no
+`base_url`. The profile names are canonical lowercase identifiers; models remain opaque strings.
+An explicit `base_url` override retains the named-provider compatibility behavior above.
+
+Credential resolution checks an explicit opaque `credential_ref` first, then the named fallback:
+`CHUTES_API_KEY`, `MORPHEUS_API_KEY`, or `NOSANA_API_KEY`. The resolved secret value never enters
+the spec, manifest, observation, result, logs, errors, or artifacts. The existing persistence
+contract for the opaque reference remains unchanged. Missing named-provider credentials fail
+before a request. These profiles add no schema fields; serialized `schema_version: "0.1"`
+continues unchanged.
+
+Normal benchmarking does not query model catalogs. Chutes' public catalog and Nosana's
+authenticated currently served catalog can assist an explicit model choice; Morpheus has an
+authenticated active-model list. Availability and pricing change. The shared adapter normalizes
+chat text, optional token usage, returned model, latency, and safe errors. It does not treat
+catalog price or arbitrary response fields as authoritative request cost. User-configured
+`pricing` and complete usage produce a calculated cost; otherwise cost is unknown. The shared
+reserved `model`, `messages`, and `stream` parameter behavior still applies. Unknown names with
+an explicit URL remain deprecated backward compatibility; new arbitrary endpoints use
+`provider: custom`.
+
 ## Evaluation and routing semantics
 
 JSON Pointer fields follow RFC 6901, including `~0` and `~1` escaping. Dataset hashing uses canonical JSON with sorted keys and compact separators, one newline-delimited record at a time. Nearest-rank percentiles use `ceil(p * n)` with a minimum rank of one.

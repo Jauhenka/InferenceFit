@@ -1,6 +1,6 @@
 # Examples
 
-Run examples from a source checkout with InferenceFit 0.2.2 installed.
+Run examples from a source checkout with InferenceFit 0.2.3 installed.
 
 For a new workload, the built-in preset projects are usually the faster starting point:
 
@@ -26,6 +26,9 @@ cover the hand-maintained compatibility and provider examples below.
 | [Gemini smoke](lead_semantic_units/eval.gemini.smoke.yaml) | Live OpenAI-compatible chat completions | `GEMINI_API_KEY` |
 | [OpenAI smoke](lead_semantic_units/eval.openai.smoke.yaml) | Live stateless Responses API | `OPENAI_API_KEY` |
 | [Generic OpenAI-compatible endpoint](generic_openai_compatible/README.md) | Canonical `provider: custom` remote and credentialless localhost configuration | Optional `INFERENCEFIT_CREDENTIAL_EXAMPLE_MAIN` |
+| [Chutes](chutes/README.md) | Hosted Chutes gateway; supply a current native model ID | `CHUTES_API_KEY` |
+| [Morpheus](morpheus/README.md) | Hosted Morpheus gateway; supply an active native model ID | `MORPHEUS_API_KEY` |
+| [Nosana](nosana/README.md) | Hosted Nosana LLM service; choose a currently served model | `NOSANA_API_KEY` |
 
 ```bash
 inferencefit validate examples/basic/eval.yaml

@@ -25,3 +25,7 @@ OpenAI-compatible endpoint, use `provider: custom`, the supplied API `base_url`,
 ID, and an opaque `credential_ref` if Bearer authentication is required. A credentialless local
 endpoint can omit the reference. Do not invent an endpoint URL or expose a credential value.
 Unknown cost remains unknown until pricing and token usage are available.
+
+For Chutes, Morpheus, or Nosana, use the named provider and a current native model ID from the
+service's documentation or model catalog. These hosted gateways use the same evaluation workflow;
+model availability and prices may change. Do not assume a model ID from memory.

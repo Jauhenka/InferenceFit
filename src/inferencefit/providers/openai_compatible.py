@@ -10,10 +10,13 @@ from .base import ProviderError, ProviderResponse
 from .http_errors import provider_error_from_response
 
 PRESET_URLS = {
+    "chutes": "https://llm.chutes.ai/v1",
     "deepseek": "https://api.deepseek.com",
     "openrouter": "https://openrouter.ai/api/v1",
     "fireworks": "https://api.fireworks.ai/inference/v1",
     "gemini": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "morpheus": "https://api.mor.org/api/v1",
+    "nosana": "https://inference.nosana.com/v1",
     "ollama": "http://127.0.0.1:11434/v1",
     "vllm": "http://127.0.0.1:8000/v1",
 }

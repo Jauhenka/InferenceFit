@@ -23,9 +23,9 @@ async def test_api_reports_current_release_version():
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         health = await client.get("/health")
-        assert health.json() == {"status": "ok", "version": "0.2.2"}
+        assert health.json() == {"status": "ok", "version": "0.2.3"}
         schema = await client.get("/openapi.json")
-        assert schema.json()["info"]["version"] == "0.2.2"
+        assert schema.json()["info"]["version"] == "0.2.3"
 
 
 async def test_fixture_manifest_reports_current_release_version(tmp_path):
@@ -36,7 +36,7 @@ async def test_fixture_manifest_reports_current_release_version(tmp_path):
     manifest = json.loads(
         (tmp_path / "runs" / result.run_id / "manifest.json").read_text(encoding="utf-8")
     )
-    assert manifest["inferencefit_version"] == "0.2.2"
+    assert manifest["inferencefit_version"] == "0.2.3"
     assert manifest["schema_version"] == "0.1"
 
 
@@ -132,6 +132,14 @@ def test_write_custom_workload_creates_one_credentialless_case(tmp_path):
             "base_url": "http://127.0.0.1:12345/v1",
         }
     ]
+
+
+def test_installed_smoke_checks_all_named_decentralized_profiles():
+    assert smoke.assert_named_decentralized_profiles() == {
+        "chutes": "https://llm.chutes.ai/v1",
+        "morpheus": "https://api.mor.org/api/v1",
+        "nosana": "https://inference.nosana.com/v1",
+    }
 
 
 def test_custom_smoke_checks_local_request_and_unknown_cost(tmp_path, monkeypatch):
@@ -347,6 +355,7 @@ def test_smoke_main_exercises_packaged_presets_and_skill(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(sys, "executable", str(isolated_python))
     monkeypatch.setattr(smoke.shutil, "which", lambda _name: str(executable))
+    monkeypatch.setattr(smoke, "assert_named_decentralized_profiles", lambda: None)
 
     workdir = tmp_path / "work"
     workdir.mkdir()

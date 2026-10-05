@@ -22,6 +22,11 @@ run proves the evaluation plumbing; it does not recommend a model.
    the supplied service exposes an OpenAI-compatible endpoint, use `provider: custom` with an
    explicit `base_url` and its native model ID. Do not invent endpoint URLs or credential values;
    use information supplied by the user, project, or service documentation.
+   Chutes, Morpheus, and Nosana are first-class distributed-inference gateway providers: use
+   `provider: chutes`, `provider: morpheus`, or `provider: nosana` rather than `custom` for those
+   services. Model availability can change; check current provider documentation or a live model
+   catalog and never assume a model ID from memory. Evaluate their quality, latency, reliability,
+   and known or unknown cost through the same benchmark workflow.
 4. Select validators from trustworthy evidence. Read
    [validator selection](references/validators.md) before using approximate checks or custom code.
 5. Check required credential presence by documented variable name or opaque `credential_ref`.

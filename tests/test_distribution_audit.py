@@ -250,6 +250,9 @@ def test_provider_key_assignment_is_rejected_from_archive(tmp_path: Path) -> Non
         ("OPEN_ROUTER" + "_API_KEY", "router-real-secret-value-123456"),
         ("GEMINI" + "_API_KEY", "gemini-real-secret-value-123456"),
         ("OPENAI" + "_API_KEY", "openai-real-secret-value-123456"),
+        ("CHUTES" + "_API_KEY", "chutes-real-secret-value-123456"),
+        ("MORPHEUS" + "_API_KEY", "morpheus-real-secret-value-123456"),
+        ("NOSANA" + "_API_KEY", "nosana-real-secret-value-123456"),
         (
             "INFERENCEFIT" + "_CREDENTIAL_ROUTER_TOKEN",
             "router-real-secret-value-123456",
