@@ -2,6 +2,16 @@
 
 All notable changes to InferenceFit are documented in this file.
 
+## 0.2.2
+
+Generic OpenAI-compatible provider release. See [0.2.2 release notes](docs/releases/0.2.2.md).
+
+- Add `provider: custom` with a required, validated `base_url` for a documented chat-completions endpoint.
+- Support credential references or credentialless localhost endpoints through the shared adapter.
+- Reserve `model`, `messages`, and `stream` parameters before HTTP; retain non-streaming semantics.
+- Warn on deprecated unknown-provider plus `base_url` configurations while preserving compatibility.
+- Add a runnable generic-provider example and offline benchmark coverage; preserve schema version `0.1`.
+
 ## 0.2.1
 
 Agent UX and workload-presets release. See [0.2.1 release notes](docs/releases/0.2.1.md).

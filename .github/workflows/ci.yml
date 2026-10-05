@@ -71,11 +71,11 @@ jobs:
       - name: Validate distribution metadata with Twine
         run: python -m twine check dist/*
       - name: Audit distribution contents
-        run: python scripts/audit_distribution.py dist --expected-version 0.2.1
+        run: python scripts/audit_distribution.py dist --expected-version 0.2.2
       - name: Verify the installed wheel
-        run: python scripts/verify_artifact_install.py dist/inferencefit-0.2.1-py3-none-any.whl 0.2.1 .
+        run: python scripts/verify_artifact_install.py dist/inferencefit-0.2.2-py3-none-any.whl 0.2.2 .
       - name: Verify the installed sdist
-        run: python scripts/verify_artifact_install.py dist/inferencefit-0.2.1.tar.gz 0.2.1 .
+        run: python scripts/verify_artifact_install.py dist/inferencefit-0.2.2.tar.gz 0.2.2 .
       - name: Upload the verified distributions
         uses: actions/upload-artifact@v7
         with:

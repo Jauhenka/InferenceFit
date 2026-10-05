@@ -22,13 +22,13 @@ def test_release_version_has_one_maintained_source() -> None:
     assert "version" not in config["project"]
     assert config["project"]["dynamic"] == ["version"]
     assert config["tool"]["hatch"]["version"]["path"] == "src/inferencefit/__init__.py"
-    assert inferencefit.__version__ == "0.2.1"
+    assert inferencefit.__version__ == "0.2.2"
 
 
 @pytest.mark.parametrize(
     "required",
     [
-        "InferenceFit 0.2.1",
+        "InferenceFit 0.2.2",
         "Fireworks",
         "DeepSeek",
         "OpenRouter",
@@ -135,9 +135,30 @@ def test_agent_ux_release_notes_and_changelog_are_scoped() -> None:
 
 def test_release_guide_uses_current_rehearsal_and_tag_examples() -> None:
     content = (ROOT / "docs" / "releasing.md").read_text(encoding="utf-8")
-    assert "inferencefit==0.2.1" in content
-    assert "v0.2.1" in content
-    assert "READY_FOR_0.2.1" in content
+    assert "inferencefit==0.2.2" in content
+    assert "v0.2.2" in content
+    assert "READY_FOR_0.2.2" in content
+
+
+def test_generic_provider_release_notes_and_changelog_are_scoped() -> None:
+    notes = ROOT / "docs/releases/0.2.2.md"
+    content = notes.read_text(encoding="utf-8").lower()
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").lower()
+    for required in (
+        "provider: custom",
+        "base_url",
+        "credential_ref",
+        "deprecated",
+        "backward compatibility",
+        "headers",
+        "unknown cost",
+        'schema_version: "0.1"',
+    ):
+        assert required in content
+    assert "## 0.2.2" in changelog
+    assert "docs/releases/0.2.2.md" in changelog
+    for historical in ("0.1.0", "0.2.0", "0.2.1"):
+        assert (ROOT / f"docs/releases/{historical}.md").is_file()
 
 
 def test_public_package_metadata_is_complete() -> None:

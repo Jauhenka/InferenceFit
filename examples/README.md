@@ -1,6 +1,6 @@
 # Examples
 
-Run examples from a source checkout with InferenceFit 0.2.1 installed.
+Run examples from a source checkout with InferenceFit 0.2.2 installed.
 
 For a new workload, the built-in preset projects are usually the faster starting point:
 

@@ -6,7 +6,7 @@ test cases against candidate providers and models, measures quality, reliability
 use, and cost, applies your hard constraints, and produces a deterministic recommendation and an
 open routing policy.
 
-InferenceFit 0.2.1 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
+InferenceFit 0.2.2 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
 
 ## Installation
 
@@ -39,7 +39,7 @@ overwrites an existing destination.
 
 ## Agent Skill
 
-InferenceFit 0.2.1 also packages a portable Agent Skill for agents that prepare or interpret
+InferenceFit 0.2.2 also packages a portable Agent Skill for agents that prepare or interpret
 workload-specific evaluations. Locate it with:
 
 ```bash
@@ -240,14 +240,14 @@ do not expose it to a network.
 
 ## Current limitations
 
-Version 0.2.1 uses a local process job manager and filesystem artifact store. It supports
+Version 0.2.2 uses a local process job manager and filesystem artifact store. It supports
 non-streaming chat completions and OpenAI Responses text output, a single two-stage fallback,
 and Python only. Cost uses reported request cost where available, then static configured prices;
 it is not an invoice reconciliation system. Exact validators intentionally do not provide
 semantic-equivalence scoring. There is no hosted Cloud/SaaS service, account system, traffic proxy,
 browser UI, distributed worker system, learned routing, or model training.
 
-## Roadmap (not available in 0.2.1)
+## Roadmap (not available in 0.2.2)
 
 Potential future work includes richer request modalities, more provider-specific metadata,
 scalable artifact-store adapters, and additional language SDKs. These are directions, not current
@@ -280,6 +280,7 @@ Detailed references:
 
 - [Architecture](docs/architecture.md)
 - [Serialized contracts](docs/contracts.md)
+- [0.2.2 release notes](docs/releases/0.2.2.md)
 - [0.2.1 release notes](docs/releases/0.2.1.md)
 - [0.2.0 release notes](docs/releases/0.2.0.md)
 - [0.1.0 release notes](docs/releases/0.1.0.md)
