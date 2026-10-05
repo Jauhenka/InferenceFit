@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import sys
+import sysconfig
 from pathlib import Path
 from types import SimpleNamespace
 from urllib.request import Request, urlopen
@@ -133,8 +134,11 @@ def test_write_custom_workload_creates_one_credentialless_case(tmp_path):
     ]
 
 
-def test_custom_smoke_checks_local_request_and_unknown_cost(tmp_path):
-    executable = smoke.console_script_path(Path(sys.executable), os.name)
+def test_custom_smoke_checks_local_request_and_unknown_cost(tmp_path, monkeypatch):
+    # Hosted Python places the console script under Scripts/, not beside python.exe.
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "hosted-python.exe"))
+    script_name = "inferencefit.exe" if os.name == "nt" else "inferencefit"
+    executable = Path(sysconfig.get_path("scripts")) / script_name
     assert executable.is_file()
 
     request, observation = smoke.run_custom_smoke(str(executable), tmp_path)
