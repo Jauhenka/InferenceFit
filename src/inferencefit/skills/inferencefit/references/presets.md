@@ -19,3 +19,9 @@ selection-grade dataset.
 
 If no preset fits, adapt a normal schema-version `0.1` evaluation rather than forcing the workload
 into the wrong shape. Use `inferencefit validate <path>/eval.yaml` after every structural change.
+
+When replacing a fixture candidate, prefer a first-class provider adapter. For an otherwise
+OpenAI-compatible endpoint, use `provider: custom`, the supplied API `base_url`, the native model
+ID, and an opaque `credential_ref` if Bearer authentication is required. A credentialless local
+endpoint can omit the reference. Do not invent an endpoint URL or expose a credential value.
+Unknown cost remains unknown until pricing and token usage are available.

@@ -160,7 +160,7 @@ The supported paths use non-streaming HTTP requests without vendor SDKs:
 | OpenAI (`openai`) | Native Responses API with `store: false` | `OPENAI_API_KEY` |
 | Fixture (`fixture`) | Deterministic offline testing | None |
 | Ollama (`ollama`) and vLLM (`vllm`) | Local OpenAI-compatible chat completions | Optional explicit reference |
-| Custom compatible endpoint | Chat completions at an explicit `base_url` | Optional explicit reference |
+| Generic OpenAI-compatible (`custom`) | Chat completions at an explicit `base_url` | Optional explicit reference |
 
 Credentials are resolved from opaque references. For example, `credential_ref: fireworks-main`
 checks `INFERENCEFIT_CREDENTIAL_FIREWORKS_MAIN` first, then `FIREWORKS_API_KEY`. The other hosted
@@ -197,10 +197,36 @@ For example, some OpenAI models reject `temperature`. OpenAI normalizes `max_tok
 `model`, `input`, and `store`. Each evaluation is stateless. An explicit `base_url` selects
 generic chat completions, including when overriding a hosted provider's native path.
 
-For a local endpoint, use `provider: ollama` or `provider: vllm` with a model served there. For
-another custom compatible server, use `provider: openai-compatible`, an explicit `base_url` (such as
-`http://localhost:8000/v1`), and its model ID. Add an opaque `credential_ref` if authentication
-is required. The [examples guide](examples/README.md) indexes the complete runnable specs.
+For an otherwise OpenAI-compatible endpoint, use the canonical `provider: custom` with an
+explicit API `base_url` and the server's native model ID:
+
+```yaml
+candidates:
+  - id: my-endpoint
+    provider: custom
+    model: some/model-name
+    base_url: https://api.example.com/v1
+    credential_ref: example-main
+    parameters: {max_tokens: 64}
+```
+
+`credential_ref: example-main` reads `INFERENCEFIT_CREDENTIAL_EXAMPLE_MAIN`; omit the reference
+for a credentialless local endpoint such as `http://127.0.0.1:8000/v1` or
+`http://[::1]:8000/v1`. The base URL is an API root, not a full `/chat/completions` URL;
+InferenceFit appends that path. Use HTTPS for remote endpoints. `model`, `messages`, and `stream`
+are reserved request parameters, and custom headers are not supported. OpenAI-compatible servers
+vary in accepted parameters and response details, so verify the endpoint and credential setup
+from your project or provider documentation before sending data. Do not put secrets in URLs or
+parameters: those values are persisted in run artifacts. Cost is unknown unless complete token
+usage and configured `pricing` are available; unknown cost is not zero.
+
+Prefer a first-class provider adapter when one exists because it may normalize provider-specific
+behavior, metadata, or cost. For a local endpoint with a built-in profile, `provider: ollama` and
+`provider: vllm` remain available. An unknown provider name plus explicit `base_url` continues to
+run for backward compatibility, but that path is deprecated and warns in 0.2.2. New
+configurations must use `provider: custom`. See the
+[generic example](examples/generic_openai_compatible/README.md) and
+[examples guide](examples/README.md).
 
 ## Local daemon
 

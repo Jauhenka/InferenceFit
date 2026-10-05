@@ -205,3 +205,34 @@ def test_sdist_excludes_internal_release_planning_documents() -> None:
         "/docs/release-0.1.0.md",
     }
     assert required <= excluded
+
+
+def test_generic_provider_example_and_guidance_are_discoverable() -> None:
+    from inferencefit.spec import load_evaluation_spec
+
+    example_dir = ROOT / "examples" / "generic_openai_compatible"
+    spec_path = example_dir / "eval.yaml"
+    loaded = load_evaluation_spec(spec_path)
+    candidate = loaded.spec.candidates[0]
+    assert len(loaded.spec.candidates) == 1
+    assert candidate.provider == "custom"
+    assert candidate.model == "some/model-name"
+    assert candidate.base_url == "https://api.example.com/v1"
+    assert candidate.credential_ref == "example-main"
+    assert len(loaded.resolve_dataset_path().read_text(encoding="utf-8").splitlines()) == 1
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8").lower()
+    contracts = (ROOT / "docs/contracts.md").read_text(encoding="utf-8").lower()
+    index = (ROOT / "examples/README.md").read_text(encoding="utf-8")
+    example_readme = (example_dir / "README.md").read_text(encoding="utf-8").lower()
+    assert "generic_openai_compatible" in index
+    for text in (readme, contracts, example_readme):
+        assert "provider: custom" in text
+        assert "base_url" in text
+        assert "inferencefit_credential_example_main" in text
+        assert "localhost" in text or "127.0.0.1" in text
+        assert "unknown" in text and "cost" in text
+        assert "deprecated" in text and "backward compatibility" in text
+    assert "first-class" in readme
+    assert "stream" in contracts
+    assert "example.com" in spec_path.read_text(encoding="utf-8")
