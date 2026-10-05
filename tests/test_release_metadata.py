@@ -161,6 +161,13 @@ def test_generic_provider_release_notes_and_changelog_are_scoped() -> None:
         assert (ROOT / f"docs/releases/{historical}.md").is_file()
 
 
+def test_packaged_skill_validator_reference_names_current_release() -> None:
+    content = (ROOT / "src/inferencefit/skills/inferencefit/references/validators.md").read_text(
+        encoding="utf-8"
+    )
+    assert "version 0.2.2 has no built-in semantic" in content
+
+
 def test_public_package_metadata_is_complete() -> None:
     project = load_pyproject()["project"]
     assert project["name"] == "inferencefit"
