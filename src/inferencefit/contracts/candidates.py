@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+_ALLOWED_SCHEMES = frozenset({"http", "https"})
 
 
 class PricingSpec(BaseModel):
@@ -50,3 +53,34 @@ class CandidateSpec(BaseModel):
         if not value:
             raise ValueError("field must be a non-empty string")
         return value
+
+    @model_validator(mode="after")
+    def _validate_endpoint(self) -> CandidateSpec:
+        base_url = self.base_url
+        if self.provider == "custom" and (base_url is None or not base_url.strip()):
+            raise ValueError("custom provider requires base_url")
+        if base_url is None:
+            return self
+
+        invalid = ValueError("invalid base_url")
+        if not base_url or any(
+            char.isspace() or ord(char) < 32 or ord(char) == 127 for char in base_url
+        ):
+            raise invalid
+        if "?" in base_url or "#" in base_url:
+            raise invalid
+        try:
+            parsed = urlsplit(base_url)
+            hostname = parsed.hostname
+            _ = parsed.port  # Validate malformed and out-of-range ports.
+        except ValueError:
+            raise invalid from None
+        if (
+            parsed.scheme not in _ALLOWED_SCHEMES
+            or not hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path.rstrip("/").lower().endswith("/chat/completions")
+        ):
+            raise invalid
+        return self

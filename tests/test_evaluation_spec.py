@@ -252,6 +252,138 @@ def test_optimization_objective_uses_binding_names() -> None:
         OptimizationSpec(objective="max_cost")
 
 
+def _candidate_error_messages(exc: ValidationError) -> list[str]:
+    """Return only the safe ValueError categories, never echoing input values."""
+    return [error["msg"] for error in exc.errors()]
+
+
+def test_custom_candidate_requires_explicit_base_url() -> None:
+    with pytest.raises(ValidationError, match="custom provider requires base_url"):
+        CandidateSpec.model_validate({"id": "c", "provider": "custom", "model": "m"})
+
+
+@pytest.mark.parametrize("blank", ["", "   ", "\t", "\n "])
+def test_custom_candidate_rejects_blank_base_url_without_echo(blank: str) -> None:
+    with pytest.raises(ValidationError, match="custom provider requires base_url") as exc_info:
+        CandidateSpec.model_validate(
+            {"id": "c", "provider": "custom", "model": "m", "base_url": blank}
+        )
+
+    messages = _candidate_error_messages(exc_info.value)
+    assert messages == ["Value error, custom provider requires base_url"]
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "http://localhost:8000/v1",
+        "http://127.0.0.1:11434/v1/",
+        "http://[::1]:8000/v1",
+        "https://gateway.example.com/api",
+        "https://gateway.example.com",
+        "https://gateway.example.com/v1/",
+    ],
+)
+def test_custom_candidate_accepts_valid_base_urls(base_url: str) -> None:
+    candidate = CandidateSpec.model_validate(
+        {"id": "c", "provider": "custom", "model": "some/model-name", "base_url": base_url}
+    )
+    assert candidate.base_url == base_url
+
+
+def test_custom_candidate_preserves_model_credential_and_pricing() -> None:
+    candidate = CandidateSpec.model_validate(
+        {
+            "id": "c",
+            "provider": "custom",
+            "model": "some/model-name",
+            "base_url": "https://gateway.example.com/v1",
+            "credential_ref": "example-main",
+            "pricing": {"input_per_million": 1.0, "output_per_million": 2.0},
+            "parameters": {"max_tokens": 64},
+        }
+    )
+    assert candidate.model == "some/model-name"
+    assert candidate.credential_ref == "example-main"
+    assert candidate.pricing is not None
+    assert candidate.pricing.input_per_million == 1.0
+    assert candidate.pricing.output_per_million == 2.0
+    assert candidate.parameters == {"max_tokens": 64}
+
+
+@pytest.mark.parametrize(
+    "provider",
+    ["fireworks", "openrouter", "openai", "gemini", "ollama", "vllm", "opneai", "totally-unknown"],
+)
+def test_providers_without_base_url_remain_valid(provider: str) -> None:
+    candidate = CandidateSpec.model_validate({"id": "c", "provider": provider, "model": "m"})
+    assert candidate.base_url is None
+
+
+def test_named_provider_with_explicit_base_url_remains_valid() -> None:
+    candidate = CandidateSpec.model_validate(
+        {
+            "id": "c",
+            "provider": "openai",
+            "model": "gpt-x",
+            "base_url": "https://proxy.example.com/v1",
+        }
+    )
+    assert candidate.base_url == "https://proxy.example.com/v1"
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "ftp://gateway.example.com/v1",
+        "gateway.example.com/v1",
+        "//gateway.example.com/v1",
+        "https://",
+        "http://:8000/v1",
+        "http://localhost:notaport/v1",
+        "http://localhost:99999/v1",
+        "https://user:pass@gateway.example.com/v1",
+        "https://user@gateway.example.com/v1",
+        "https://gateway.example.com/v1?token=abc",
+        "https://gateway.example.com/v1#frag",
+        "https://gateway.example.com/v1/chat/completions",
+        "https://gateway.example.com/chat/completions/",
+        "https://gateway.example.com/V1/Chat/Completions",
+        "https://gateway.example.com/v1/ chat",
+        "https://gateway.example.com/v1/pa\tth",
+    ],
+)
+def test_malformed_base_url_rejected_without_echoing_url(base_url: str) -> None:
+    with pytest.raises(ValidationError, match="invalid base_url") as exc_info:
+        CandidateSpec.model_validate(
+            {"id": "c", "provider": "custom", "model": "m", "base_url": base_url}
+        )
+
+    messages = _candidate_error_messages(exc_info.value)
+    assert messages == ["Value error, invalid base_url"]
+    # The safe category never embeds the offending URL text.
+    assert base_url.strip() not in " ".join(messages)
+
+
+def test_malformed_base_url_on_named_provider_also_rejected() -> None:
+    with pytest.raises(ValidationError, match="invalid base_url"):
+        CandidateSpec.model_validate(
+            {
+                "id": "c",
+                "provider": "openai",
+                "model": "gpt-x",
+                "base_url": "https://gateway.example.com/v1/chat/completions",
+            }
+        )
+
+
+def test_blank_base_url_on_named_provider_rejected() -> None:
+    with pytest.raises(ValidationError, match="invalid base_url"):
+        CandidateSpec.model_validate(
+            {"id": "c", "provider": "fireworks", "model": "m", "base_url": "   "}
+        )
+
+
 def test_loader_rejects_duplicate_yaml_keys(tmp_path) -> None:
     path = tmp_path / "dup.yaml"
     path.write_text(
