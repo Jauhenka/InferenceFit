@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import secrets
 
 import httpx
 import pytest
@@ -43,7 +44,7 @@ def _observations(run_dir):
 async def test_authenticated_custom_benchmark_masks_resolved_secret(
     tmp_path, monkeypatch, respx_mock, caplog
 ):
-    secret = "custom-integration-secret"
+    secret = f"custom-{secrets.token_hex(16)}"
     monkeypatch.setenv("INFERENCEFIT_CREDENTIAL_CUSTOM_TEST", secret)
     _write_case(tmp_path)
     spec_path = tmp_path / "eval.yaml"
