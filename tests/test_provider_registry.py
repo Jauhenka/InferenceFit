@@ -159,6 +159,44 @@ async def test_explicit_base_url_forces_generic_chat_path(
 
 
 @pytest.mark.asyncio
+async def test_unknown_provider_with_base_url_warns_secret_safe_and_stays_shared(
+    tmp_path, monkeypatch, respx_mock, create_provider
+):
+    monkeypatch.setenv("INFERENCEFIT_CREDENTIAL_REGISTRY", "super-secret-token")
+    respx_mock.post("https://legacy.test/v1/chat/completions").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "legacy answer"}}],
+                "provider": "ignored-backend",
+                "usage": {"cost": 9},
+            },
+        )
+    )
+    candidate = CandidateSpec(
+        id="x",
+        provider="opneai",
+        model="requested",
+        credential_ref="registry",
+        base_url="https://legacy.test/v1",
+    )
+    resolver = RecordingResolver()
+    with pytest.warns(UserWarning) as record:
+        adapter = create_provider(candidate, spec_dir=tmp_path, resolver=resolver)
+    assert type(adapter) is OpenAICompatibleProvider
+    messages = [str(warning.message) for warning in record]
+    assert any("custom" in message for message in messages)
+    for message in messages:
+        assert "opneai" not in message
+        assert "legacy.test" not in message
+        assert "super-secret-token" not in message
+    assert resolver.calls == [("registry", "opneai")]
+    response = await adapter.complete(candidate, case(), 0)
+    assert response.raw_output == "legacy answer"
+    assert response.provider == "opneai"
+
+
+@pytest.mark.asyncio
 async def test_unknown_provider_without_base_url_fails_at_request_time(tmp_path, create_provider):
     candidate = CandidateSpec(id="x", provider="unknown", model="requested")
     resolver = RecordingResolver()
