@@ -29,8 +29,38 @@ Older schema 0.1 observations without the new fields load with the defaults and 
 for compatible resume operations. New readers accept both old and new records; older strict
 readers may need updating to accept the additional keys. The existing candidate shape is
 unchanged: `provider`, `model`, optional `base_url` and `credential_ref`, `parameters`, and
-optional static `pricing`. No credentials appear in serialized contracts. Manifests report
+optional static `pricing`. No resolved credential values appear in serialized contracts. Manifests report
 the package's `inferencefit_version: "0.2.0"` separately from the serialized schema version.
+
+## Generic OpenAI-compatible candidates in 0.2.2
+
+The serialized schema stays `"0.1"`. The canonical generic syntax is `provider: custom`, a
+native `model`, and an explicit HTTP(S) API `base_url`, for example
+`https://api.example.com/v1`. InferenceFit appends `/chat/completions`; a full completion URL is
+invalid. `http://localhost:8000/v1`, `http://127.0.0.1:8000/v1`, and
+`http://[::1]:8000/v1` are valid local bases. Remote endpoints should use HTTPS. A base URL
+cannot contain userinfo, query, fragment, or whitespace. Its path must not carry secrets because
+the URL is persisted in artifacts.
+
+For Bearer authentication, `credential_ref: example-main` resolves through
+`INFERENCEFIT_CREDENTIAL_EXAMPLE_MAIN`. Omit the reference for a credentialless local server.
+The opaque reference is not a resolved credential; 0.2.2 preserves the existing spec/artifact
+persistence behavior for that identifier. Resolved secret values must never appear in specs,
+manifests, observations, results, logs, errors, or artifacts. No arbitrary environment-variable
+name or custom HTTP header field is added.
+
+`parameters` pass through to non-streaming chat completions except `model`, `messages`, and
+`stream`, which are reserved and fail before HTTP. OpenAI-compatible services vary in supported
+parameters and optional usage fields. Custom responses retain text, available token usage, the
+actual returned model, and latency. The generic adapter does not interpret arbitrary response
+cost metadata. Configured `pricing` can calculate cost when both token counts and prices exist;
+otherwise cost is unknown, never zero by default.
+
+Prefer a first-class adapter when available. An unknown provider name with explicit `base_url`
+still routes through the generic adapter for backward compatibility, but this syntax is
+deprecated and warns in 0.2.2. New configurations use `provider: custom`. Named-provider
+`base_url` overrides still take precedence for 0.2.x compatibility and bypass provider-specific
+behavior on that route.
 
 ## Evaluation and routing semantics
 

@@ -2,8 +2,10 @@ import json
 import os
 import subprocess
 import sys
+import sysconfig
 from pathlib import Path
 from types import SimpleNamespace
+from urllib.request import Request, urlopen
 
 import pytest
 import yaml
@@ -21,9 +23,9 @@ async def test_api_reports_current_release_version():
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         health = await client.get("/health")
-        assert health.json() == {"status": "ok", "version": "0.2.1"}
+        assert health.json() == {"status": "ok", "version": "0.2.2"}
         schema = await client.get("/openapi.json")
-        assert schema.json()["info"]["version"] == "0.2.1"
+        assert schema.json()["info"]["version"] == "0.2.2"
 
 
 async def test_fixture_manifest_reports_current_release_version(tmp_path):
@@ -34,7 +36,7 @@ async def test_fixture_manifest_reports_current_release_version(tmp_path):
     manifest = json.loads(
         (tmp_path / "runs" / result.run_id / "manifest.json").read_text(encoding="utf-8")
     )
-    assert manifest["inferencefit_version"] == "0.2.1"
+    assert manifest["inferencefit_version"] == "0.2.2"
     assert manifest["schema_version"] == "0.1"
 
 
@@ -109,6 +111,78 @@ def test_write_fixture_workload_creates_two_case_relative_fixture_spec(tmp_path)
     ]
     assert spec["constraints"] == {"min_success_rate": 1.0}
     assert spec["execution"]["repetitions"] == 1
+
+
+def test_write_custom_workload_creates_one_credentialless_case(tmp_path):
+    spec_path = smoke.write_custom_workload(tmp_path, "http://127.0.0.1:12345/v1")
+    spec = yaml.safe_load(spec_path.read_text(encoding="utf-8"))
+    cases = [
+        json.loads(line)
+        for line in (tmp_path / "custom-dataset.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+
+    assert len(cases) == 1
+    assert cases[0]["request"]["messages"] == [{"role": "user", "content": "classify"}]
+    assert spec["dataset"]["path"] == "custom-dataset.jsonl"
+    assert spec["candidates"] == [
+        {
+            "id": "custom",
+            "provider": "custom",
+            "model": "native/model",
+            "base_url": "http://127.0.0.1:12345/v1",
+        }
+    ]
+
+
+def test_custom_smoke_checks_local_request_and_unknown_cost(tmp_path, monkeypatch):
+    # Hosted Python places the console script under Scripts/, not beside python.exe.
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "hosted-python.exe"))
+    script_name = "inferencefit.exe" if os.name == "nt" else "inferencefit"
+    executable = Path(sysconfig.get_path("scripts")) / script_name
+    assert executable.is_file()
+
+    request, observation = smoke.run_custom_smoke(str(executable), tmp_path)
+
+    assert request["path"] == "/v1/chat/completions"
+    assert request["body"] == {
+        "model": "native/model",
+        "messages": [{"role": "user", "content": "classify"}],
+    }
+    assert request["authorization"] is None
+    assert observation["provider"] == "custom"
+    assert observation["provider_status"] == "success"
+    assert observation["cost_usd"] is None
+    assert observation["cost_source"] is None
+
+
+def test_custom_smoke_stops_server_when_cli_fails(tmp_path, monkeypatch):
+    servers = []
+
+    class TrackingServer(smoke.ThreadingHTTPServer):
+        def shutdown(self):
+            self.did_shutdown = True
+            super().shutdown()
+
+        def server_close(self):
+            self.did_close = True
+            super().server_close()
+
+    def create_server(*args, **kwargs):
+        server = TrackingServer(*args, **kwargs)
+        servers.append(server)
+        return server
+
+    monkeypatch.setattr(smoke, "ThreadingHTTPServer", create_server)
+    monkeypatch.setattr(
+        smoke, "run_checked", lambda *_args: (_ for _ in ()).throw(RuntimeError("CLI failed"))
+    )
+
+    with pytest.raises(RuntimeError, match="CLI failed"):
+        smoke.run_custom_smoke("inferencefit", tmp_path)
+
+    assert len(servers) == 1
+    assert servers[0].did_shutdown
+    assert servers[0].did_close
 
 
 def test_run_checked_includes_real_failing_subprocess_diagnostics(tmp_path):
@@ -306,6 +380,43 @@ def test_smoke_main_exercises_packaged_presets_and_skill(tmp_path, monkeypatch):
         elif args and args[0] == "validate":
             stdout = "Valid EvaluationSpec 0.1\n"
         elif args and args[0] == "benchmark":
+            if "custom-eval.yaml" in args[1]:
+                spec = yaml.safe_load(Path(args[1]).read_text(encoding="utf-8"))
+                base_url = spec["candidates"][0]["base_url"]
+                payload = {
+                    "model": "native/model",
+                    "messages": [{"role": "user", "content": "classify"}],
+                }
+                request = Request(
+                    base_url + "/chat/completions",
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                )
+                with urlopen(request) as response:
+                    assert response.status == 200
+                run_dir = workdir / ".inferencefit" / "runs" / "run-custom"
+                run_dir.mkdir(parents=True)
+                result = result_payload("custom")
+                result["candidate_summaries"][0].update(
+                    planned_count=1,
+                    provider_success_count=1,
+                    total_cost_usd=None,
+                )
+                (run_dir / "result.json").write_text(json.dumps(result), encoding="utf-8")
+                (run_dir / "observations.jsonl").write_text(
+                    json.dumps(
+                        {
+                            "provider": "custom",
+                            "provider_status": "success",
+                            "cost_usd": None,
+                            "cost_source": None,
+                        }
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                stdout = "Provider successes/failures: 1/0\n"
+                return subprocess.CompletedProcess(command, 0, stdout, "")
             candidate = "offline-fixture" if "structured-extraction" in args[1] else "fixture"
             run_dir = workdir / ".inferencefit" / "runs" / f"run-{candidate}"
             run_dir.mkdir(parents=True)
@@ -332,6 +443,8 @@ def test_smoke_main_exercises_packaged_presets_and_skill(tmp_path, monkeypatch):
         ["validate"],
         ["benchmark"],
         ["skill", "path"],
+        ["validate"],
+        ["benchmark"],
     ]
     actual_prefixes = [
         command[1 : 1 + len(prefix)]

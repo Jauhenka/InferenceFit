@@ -18,7 +18,10 @@ run proves the evaluation plumbing; it does not recommend a model.
    [preset selection](references/presets.md) when the choice is unclear.
 3. Replace the sample cases with representative production examples before using the benchmark
    for model-selection decisions. Replace the fixture candidate with configurations the user can
-   and wants to evaluate.
+   and wants to evaluate. Prefer a first-class provider adapter when one exists. Otherwise, if
+   the supplied service exposes an OpenAI-compatible endpoint, use `provider: custom` with an
+   explicit `base_url` and its native model ID. Do not invent endpoint URLs or credential values;
+   use information supplied by the user, project, or service documentation.
 4. Select validators from trustworthy evidence. Read
    [validator selection](references/validators.md) before using approximate checks or custom code.
 5. Check required credential presence by documented variable name or opaque `credential_ref`.

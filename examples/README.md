@@ -1,6 +1,6 @@
 # Examples
 
-Run examples from a source checkout with InferenceFit 0.2.1 installed.
+Run examples from a source checkout with InferenceFit 0.2.2 installed.
 
 For a new workload, the built-in preset projects are usually the faster starting point:
 
@@ -25,6 +25,7 @@ cover the hand-maintained compatibility and provider examples below.
 | [OpenRouter smoke](lead_semantic_units/eval.openrouter.smoke.yaml) | Live chat completions and request metadata | `OPEN_ROUTER_API_KEY` |
 | [Gemini smoke](lead_semantic_units/eval.gemini.smoke.yaml) | Live OpenAI-compatible chat completions | `GEMINI_API_KEY` |
 | [OpenAI smoke](lead_semantic_units/eval.openai.smoke.yaml) | Live stateless Responses API | `OPENAI_API_KEY` |
+| [Generic OpenAI-compatible endpoint](generic_openai_compatible/README.md) | Canonical `provider: custom` remote and credentialless localhost configuration | Optional `INFERENCEFIT_CREDENTIAL_EXAMPLE_MAIN` |
 
 ```bash
 inferencefit validate examples/basic/eval.yaml
@@ -37,4 +38,6 @@ explicitly run `inferencefit benchmark` with that spec's path. All specs retain
 review the defaults before running. See the [lead example guide](lead_semantic_units/README.md)
 for larger Fireworks/DeepSeek workloads, validation semantics, and opt-in live pytest commands.
 The [main README](../README.md#providers-and-credentials) documents minimal candidates and the
-preserved Ollama, vLLM, and custom-compatible endpoint paths.
+preserved Ollama and vLLM paths plus the canonical `provider: custom` endpoint. An unknown
+provider name with `base_url` is deprecated backward compatibility, not another supported
+generic-provider syntax.

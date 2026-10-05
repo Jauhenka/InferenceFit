@@ -10,6 +10,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 
@@ -95,6 +97,128 @@ def write_fixture_workload(directory: Path) -> Path:
 
     spec_path.write_text(yaml.safe_dump(spec, sort_keys=False), encoding="utf-8")
     return spec_path
+
+
+def write_custom_workload(directory: Path, base_url: str) -> Path:
+    """Write one credentialless generic-provider case for the installed CLI."""
+    import yaml
+
+    case = {
+        "id": "custom-case",
+        "request": {"messages": [{"role": "user", "content": "classify"}]},
+        "expected": {"category": "a"},
+    }
+    (directory / "custom-dataset.jsonl").write_text(json.dumps(case) + "\n", encoding="utf-8")
+    spec = {
+        "schema_version": "0.1",
+        "dataset": {"path": "custom-dataset.jsonl"},
+        "candidates": [
+            {
+                "id": "custom",
+                "provider": "custom",
+                "model": "native/model",
+                "base_url": base_url,
+            }
+        ],
+        "validators": [
+            {"id": "exact", "type": "exact", "target": "/category", "reference": "/category"}
+        ],
+        "constraints": {"min_success_rate": 1.0},
+        "execution": {"retry": {"max_attempts": 1}},
+    }
+    spec_path = directory / "custom-eval.yaml"
+    spec_path.write_text(yaml.safe_dump(spec, sort_keys=False), encoding="utf-8")
+    return spec_path
+
+
+def run_custom_smoke(executable: str, workdir: Path) -> tuple[dict, dict]:
+    """Exercise the installed CLI against a real loopback chat-completions server."""
+    requests: list[dict] = []
+
+    class ChatHandler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+            requests.append(
+                {
+                    "path": self.path,
+                    "body": json.loads(body),
+                    "authorization": self.headers.get("Authorization"),
+                }
+            )
+            response = json.dumps(
+                {
+                    "model": "native/model",
+                    "choices": [{"message": {"content": '{"category":"a"}'}}],
+                }
+            ).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(response)))
+            self.end_headers()
+            self.wfile.write(response)
+
+        def log_message(self, _format: str, *_args: object) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), ChatHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        spec_path = write_custom_workload(workdir, f"http://127.0.0.1:{server.server_port}/v1")
+        previous_results = set((workdir / ".inferencefit" / "runs").glob("*/result.json"))
+        validation = run_checked([executable, "validate", str(spec_path)], workdir)
+        if "Valid EvaluationSpec 0.1" not in validation.stdout:
+            raise RuntimeError("custom evaluation spec validation did not succeed")
+        benchmark = run_checked([executable, "benchmark", str(spec_path)], workdir)
+        if "Provider successes/failures: 1/0" not in benchmark.stdout:
+            raise RuntimeError("custom benchmark did not report one provider success")
+
+        current_results = set((workdir / ".inferencefit" / "runs").glob("*/result.json"))
+        new_results = current_results - previous_results
+        if len(new_results) != 1:
+            raise RuntimeError(f"expected one custom result.json, found {len(new_results)}")
+        result_path = new_results.pop()
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        summaries = result.get("candidate_summaries")
+        if (
+            result.get("status") != "completed"
+            or not isinstance(summaries, list)
+            or len(summaries) != 1
+            or summaries[0].get("id") != "custom"
+            or summaries[0].get("provider_success_count") != 1
+            or summaries[0].get("provider_error_count") != 0
+            or summaries[0].get("total_cost_usd") is not None
+        ):
+            raise RuntimeError("custom result did not represent one successful unknown-cost case")
+        observations = (
+            (result_path.parent / "observations.jsonl").read_text(encoding="utf-8").splitlines()
+        )
+        if len(observations) != 1:
+            raise RuntimeError("custom benchmark did not produce one observation")
+        observation = json.loads(observations[0])
+        if (
+            observation.get("provider") != "custom"
+            or observation.get("provider_status") != "success"
+            or observation.get("cost_usd") is not None
+            or observation.get("cost_source") is not None
+        ):
+            raise RuntimeError("custom observation did not preserve provider and unknown cost")
+        if len(requests) != 1 or requests[0] != {
+            "path": "/v1/chat/completions",
+            "body": {
+                "model": "native/model",
+                "messages": [{"role": "user", "content": "classify"}],
+            },
+            "authorization": None,
+        }:
+            raise RuntimeError(
+                "custom endpoint did not receive the expected credentialless request"
+            )
+        return requests[0], observation
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
 
 
 def run_checked(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -227,6 +351,7 @@ def main(expected_version: str, source_root: Path | None) -> int:
 
         skill_result = run_checked([executable, "skill", "path"], workdir)
         assert_packaged_skill_path(skill_result.stdout, Path(inferencefit.__file__).parent)
+        run_custom_smoke(executable, workdir)
     return 0
 
 

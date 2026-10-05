@@ -15,7 +15,7 @@ Choose the strongest deterministic evidence the workload genuinely supports.
 
 Exact and contains validators are not semantic evaluation. They can reject equivalent wording or
 accept text that contains a token without satisfying the task. For semantic tasks, use reviewed
-representative cases and an explicit task-specific rubric; version 0.2.1 has no built-in semantic
+representative cases and an explicit task-specific rubric; version 0.2.2 has no built-in semantic
 judge.
 
 Local Python validators are trusted code. Review their module and dependencies before running them,

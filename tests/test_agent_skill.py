@@ -295,3 +295,14 @@ def test_expected_reference_files_exist_and_are_readable(path_name: str) -> None
     path = REFERENCES_DIR / path_name
     assert path.is_file(), f"missing reference: {path}"
     assert path.read_text(encoding="utf-8").strip(), f"reference is empty: {path}"
+
+
+def test_skill_teaches_generic_provider_escape_hatch_without_discovery() -> None:
+    text = _combined_text().lower()
+    assert "provider: custom" in text
+    assert "first-class" in text
+    assert "openai-compatible" in text
+    assert "base_url" in text
+    assert "do not invent" in text
+    assert "credential" in text
+    assert "provider discovery" not in text

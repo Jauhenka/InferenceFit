@@ -1,0 +1,40 @@
+schema_version: "0.1"
+dataset:
+  path: cases.jsonl
+candidates:
+  - id: generic-chat
+    provider: custom
+    model: some/model-name
+    base_url: https://api.example.com/v1
+    credential_ref: example-main
+    parameters:
+      max_tokens: 256
+validators:
+  - id: response-schema
+    type: json_schema
+    routing_gate: true
+    config:
+      schema:
+        type: object
+        required: [sentiment]
+        additionalProperties: false
+        properties:
+          sentiment:
+            type: string
+            enum: [positive, neutral, negative]
+  - id: sentiment-exact
+    type: exact
+    target: /sentiment
+    reference: /sentiment
+constraints:
+  max_provider_error_rate: 0.0
+optimization:
+  objective: max_quality
+execution:
+  repetitions: 1
+  concurrency: 1
+  timeout_ms: 60000
+  retry:
+    max_attempts: 2
+    initial_backoff_ms: 500
+    max_backoff_ms: 4000
