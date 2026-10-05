@@ -2,6 +2,15 @@
 
 All notable changes to InferenceFit are documented in this file.
 
+## 0.2.3
+
+Decentralized inference provider profiles. See [0.2.3 release notes](docs/releases/0.2.3.md).
+
+- Add `chutes`, `morpheus`, and `nosana` hosted gateway profiles over the shared non-streaming
+  OpenAI-compatible adapter, with conventional credential fallbacks and unchanged schema `0.1`.
+- Add provider examples, conservative opt-in live smoke checks, and lightweight Agent Skill guidance.
+- Keep model selection explicit during benchmarks and monetary cost configured or unknown.
+
 ## 0.2.2
 
 Generic OpenAI-compatible provider release. See [0.2.2 release notes](docs/releases/0.2.2.md).

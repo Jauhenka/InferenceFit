@@ -282,6 +282,32 @@ def assert_packaged_skill_path(output: str, package_root: Path) -> None:
             raise RuntimeError(f"packaged skill resource is empty: {path}")
 
 
+def assert_named_decentralized_profiles() -> dict[str, str]:
+    """Confirm installed registry dispatches each new name through the shared adapter."""
+    from inferencefit.contracts import CandidateSpec
+    from inferencefit.providers import OpenAICompatibleProvider, create_provider
+
+    class NoCredentialResolver:
+        def resolve(self, _reference: str | None, _provider: str) -> None:
+            return None
+
+    expected = {
+        "chutes": "https://llm.chutes.ai/v1",
+        "morpheus": "https://api.mor.org/api/v1",
+        "nosana": "https://inference.nosana.com/v1",
+    }
+    actual = {}
+    for provider, base_url in expected.items():
+        candidate = CandidateSpec(id=provider, provider=provider, model="native/model")
+        adapter = create_provider(candidate, spec_dir=Path.cwd(), resolver=NoCredentialResolver())
+        if type(adapter) is not OpenAICompatibleProvider:
+            raise RuntimeError(f"{provider} did not select the shared chat adapter")
+        actual[provider] = adapter._base_url(candidate)
+        if actual[provider] != base_url:
+            raise RuntimeError(f"{provider} did not resolve its expected API base")
+    return actual
+
+
 def main(expected_version: str, source_root: Path | None) -> int:
     import inferencefit
 
@@ -351,6 +377,7 @@ def main(expected_version: str, source_root: Path | None) -> int:
 
         skill_result = run_checked([executable, "skill", "path"], workdir)
         assert_packaged_skill_path(skill_result.stdout, Path(inferencefit.__file__).parent)
+        assert_named_decentralized_profiles()
         run_custom_smoke(executable, workdir)
     return 0
 

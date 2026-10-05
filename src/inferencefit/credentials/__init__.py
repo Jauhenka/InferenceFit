@@ -8,11 +8,14 @@ import re
 from inferencefit.errors import MissingCredentialError
 
 _FALLBACKS = {
+    "chutes": "CHUTES_API_KEY",
     "deepseek": "DEEPSEEK_API_KEY",
     "fireworks": "FIREWORKS_API_KEY",
     "gemini": "GEMINI_API_KEY",
     "openai": "OPENAI_API_KEY",
     "openrouter": "OPEN_ROUTER_API_KEY",
+    "morpheus": "MORPHEUS_API_KEY",
+    "nosana": "NOSANA_API_KEY",
 }
 
 

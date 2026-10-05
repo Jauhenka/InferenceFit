@@ -22,13 +22,13 @@ def test_release_version_has_one_maintained_source() -> None:
     assert "version" not in config["project"]
     assert config["project"]["dynamic"] == ["version"]
     assert config["tool"]["hatch"]["version"]["path"] == "src/inferencefit/__init__.py"
-    assert inferencefit.__version__ == "0.2.2"
+    assert inferencefit.__version__ == "0.2.3"
 
 
 @pytest.mark.parametrize(
     "required",
     [
-        "InferenceFit 0.2.2",
+        "InferenceFit 0.2.3",
         "Fireworks",
         "DeepSeek",
         "OpenRouter",
@@ -135,9 +135,9 @@ def test_agent_ux_release_notes_and_changelog_are_scoped() -> None:
 
 def test_release_guide_uses_current_rehearsal_and_tag_examples() -> None:
     content = (ROOT / "docs" / "releasing.md").read_text(encoding="utf-8")
-    assert "inferencefit==0.2.2" in content
-    assert "v0.2.2" in content
-    assert "READY_FOR_0.2.2" in content
+    assert "inferencefit==0.2.3" in content
+    assert "v0.2.3" in content
+    assert "READY_FOR_0.2.3" in content
 
 
 def test_generic_provider_release_notes_and_changelog_are_scoped() -> None:
@@ -165,7 +165,41 @@ def test_packaged_skill_validator_reference_names_current_release() -> None:
     content = (ROOT / "src/inferencefit/skills/inferencefit/references/validators.md").read_text(
         encoding="utf-8"
     )
-    assert "version 0.2.2 has no built-in semantic" in content
+    assert "version 0.2.3 has no built-in semantic" in content
+
+
+def test_decentralized_provider_release_guidance_and_examples() -> None:
+    from inferencefit.spec import load_evaluation_spec
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    contracts = (ROOT / "docs/contracts.md").read_text(encoding="utf-8")
+    examples_index = (ROOT / "examples/README.md").read_text(encoding="utf-8")
+    skill = (ROOT / "src/inferencefit/skills/inferencefit/SKILL.md").read_text(encoding="utf-8")
+    notes = (ROOT / "docs/releases/0.2.3.md").read_text(encoding="utf-8")
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    assert "## 0.2.3" in changelog
+    assert "docs/releases/0.2.3.md" in changelog
+    assert "0.2.3" in notes and 'schema_version: "0.1"' in notes
+    assert "mcp__deepseek" in agents and "get_deepseek_recovery" in agents
+    for provider, key in (
+        ("chutes", "CHUTES_API_KEY"),
+        ("morpheus", "MORPHEUS_API_KEY"),
+        ("nosana", "NOSANA_API_KEY"),
+    ):
+        directory = ROOT / "examples" / provider
+        candidate = load_evaluation_spec(directory / "eval.yaml").spec.candidates[0]
+        assert candidate.provider == provider
+        assert candidate.base_url is None
+        assert candidate.model == "<model-id>"
+        assert key in (directory / "README.md").read_text(encoding="utf-8")
+        for content in (readme, contracts, examples_index, skill, notes):
+            assert provider in content.lower()
+    assert "currently served" in notes.lower()
+    assert "unknown cost" in notes.lower()
+    assert "http 402" in notes.lower() and "non-retryable" in notes.lower()
+    for provider in ("chutes", "morpheus", "nosana"):
+        assert f"inferencefit benchmark examples/{provider}/eval.yaml" in readme
 
 
 def test_public_package_metadata_is_complete() -> None:
