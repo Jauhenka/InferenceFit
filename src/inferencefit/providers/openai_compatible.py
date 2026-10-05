@@ -35,6 +35,8 @@ class OpenAICompatibleProvider:
     async def complete(
         self, candidate: CandidateSpec, case: TestCase, repetition: int
     ) -> ProviderResponse:
+        if {"model", "messages", "stream"}.intersection(candidate.parameters):
+            raise ProviderError("reserved chat-completions parameter", kind="configuration")
         base_url = self._base_url(candidate)
         if not base_url:
             raise ProviderError("OpenAI-compatible candidate requires base_url")

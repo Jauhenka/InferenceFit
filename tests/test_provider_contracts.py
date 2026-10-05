@@ -143,3 +143,46 @@ async def test_optional_metadata_cannot_fail_successful_text(respx_mock, metadat
     assert response.raw_output == "answer"
     assert response.model == "requested"
     assert response.input_tokens is response.output_tokens is response.total_tokens is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "parameters",
+    [{"model": "other"}, {"messages": []}, {"stream": True}, {"stream": False}],
+)
+async def test_reserved_parameter_keys_are_rejected_without_http(respx_mock, parameters):
+    route = respx_mock.post("https://example.test/v1/chat/completions").mock(
+        return_value=httpx.Response(200, json={"choices": [{"message": {"content": "x"}}]})
+    )
+    candidate = CandidateSpec(
+        id="x",
+        provider="custom",
+        model="m",
+        base_url="https://example.test/v1",
+        parameters=parameters,
+    )
+    with pytest.raises(ProviderError) as caught:
+        await OpenAICompatibleProvider("secret-token").complete(candidate, request_case(), 0)
+    assert caught.value.kind == "configuration"
+    assert route.call_count == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx.Response(200, text="{secret-token"),
+        httpx.Response(200, json={"choices": []}),
+        httpx.Response(200, json={"choices": [{"message": {"content": None}}]}),
+    ],
+)
+async def test_malformed_custom_completion_is_safe_response_error(respx_mock, response):
+    respx_mock.post("https://example.test/v1/chat/completions").mock(return_value=response)
+    candidate = CandidateSpec(
+        id="x", provider="custom", model="m", base_url="https://example.test/v1"
+    )
+    with pytest.raises(ProviderError) as caught:
+        await OpenAICompatibleProvider("secret-token").complete(candidate, request_case(), 0)
+    assert caught.value.kind == "response"
+    assert caught.value.retryable is False
+    assert "secret-token" not in str(caught.value)
