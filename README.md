@@ -6,7 +6,7 @@ test cases against candidate providers and models, measures quality, reliability
 use, and cost, applies your hard constraints, and produces a deterministic recommendation and an
 open routing policy.
 
-InferenceFit 0.2.3 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
+InferenceFit 0.2.4 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
 
 ## Installation
 
@@ -39,7 +39,7 @@ overwrites an existing destination.
 
 ## Agent Skill
 
-InferenceFit 0.2.3 also packages a portable Agent Skill for agents that prepare or interpret
+InferenceFit 0.2.4 also packages a portable Agent Skill for agents that prepare or interpret
 workload-specific evaluations. Locate it with:
 
 ```bash
@@ -106,9 +106,14 @@ inferencefit benchmark examples/morpheus/eval.yaml
 
 # Requires NOSANA_API_KEY
 inferencefit benchmark examples/nosana/eval.yaml
+
+# Replace <claude-model-id> with an available Anthropic model ID first.
+# Requires ANTHROPIC_API_KEY
+inferencefit benchmark examples/anthropic/eval.yaml
 ```
 
-These specs use synthetic lead-extraction cases. See the
+The lead-semantic-units smoke specs use synthetic lead-extraction cases; the hosted-provider
+examples use one small prompt each. See the
 [example guide](examples/lead_semantic_units/README.md) and the
 [E0.5 validation report](docs/e0.5-real-world-validation.md) for their contract, pricing snapshots,
 and observed results.
@@ -168,6 +173,7 @@ The supported paths use non-streaming HTTP requests without vendor SDKs:
 | OpenRouter (`openrouter`) | Chat completions with reported cost and backend metadata | `OPEN_ROUTER_API_KEY` |
 | Gemini (`gemini`) | Google's OpenAI-compatible chat completions endpoint | `GEMINI_API_KEY` |
 | OpenAI (`openai`) | Native Responses API with `store: false` | `OPENAI_API_KEY` |
+| Anthropic (`anthropic`, alias `claude`) | Native non-streaming Messages API | `ANTHROPIC_API_KEY` |
 | Chutes (`chutes`) | Hosted OpenAI-compatible Chutes inference gateway | `CHUTES_API_KEY` |
 | Morpheus (`morpheus`) | Hosted OpenAI-compatible Morpheus gateway | `MORPHEUS_API_KEY` |
 | Nosana (`nosana`) | Hosted OpenAI-compatible LLM inference | `NOSANA_API_KEY` |
@@ -180,6 +186,32 @@ checks `INFERENCEFIT_CREDENTIAL_FIREWORKS_MAIN` first, then `FIREWORKS_API_KEY`.
 providers fall back to their variables in the table. OpenRouter's exact name is
 `OPEN_ROUTER_API_KEY`; the older `OPENROUTER_API_KEY` spelling is not a resolver fallback.
 Credential values are never written to run artifacts.
+
+### Anthropic (Claude)
+
+Use `provider: anthropic` for native Anthropic Messages requests. `provider: claude` is an accepted
+alias for the same adapter; the observation reports canonical `anthropic`. The provider must be
+explicit because model IDs are opaque and never used to infer a provider. `ANTHROPIC_API_KEY` is
+the fallback after an optional opaque `credential_ref`. The adapter sends leading system messages
+as a top-level system prompt and preserves the user/assistant conversation order. System messages
+after conversation starts and named messages fail before HTTP.
+
+```yaml
+candidates:
+  - id: claude
+    provider: anthropic
+    model: <claude-model-id>
+    parameters: {max_tokens: 64}
+```
+
+Replace the placeholder with a currently available Anthropic model ID. `max_tokens` defaults to
+1024 if omitted; `max_output_tokens` is also accepted as an alias. `temperature` is sent only when
+configured because support varies by model. `model`, `messages`, `system`, and `stream` are reserved
+parameters; streaming is unsupported. The native response's text, returned model, and available
+token usage enter the usual benchmark artifacts. Cost stays unknown without configured `pricing`
+and complete usage. Static pricing is only an estimate and does not account for cache-specific
+rates. See the [Anthropic example](examples/anthropic/README.md). An explicit `base_url` retains
+the existing generic chat-completions override, so omit it for the native Messages API.
 
 ### Decentralized inference providers
 
@@ -272,14 +304,15 @@ do not expose it to a network.
 
 ## Current limitations
 
-Version 0.2.3 uses a local process job manager and filesystem artifact store. It supports
-non-streaming chat completions and OpenAI Responses text output, a single two-stage fallback,
+Version 0.2.4 uses a local process job manager and filesystem artifact store. It supports
+non-streaming chat completions, OpenAI Responses text output, and Anthropic Messages text output,
+a single two-stage fallback,
 and Python only. Cost uses reported request cost where available, then static configured prices;
 it is not an invoice reconciliation system. Exact validators intentionally do not provide
 semantic-equivalence scoring. There is no hosted Cloud/SaaS service, account system, traffic proxy,
 browser UI, distributed worker system, learned routing, or model training.
 
-## Roadmap (not available in 0.2.3)
+## Roadmap (not available in 0.2.4)
 
 Potential future work includes richer request modalities, more provider-specific metadata,
 scalable artifact-store adapters, and additional language SDKs. These are directions, not current
@@ -318,6 +351,7 @@ Detailed references:
 
 - [Architecture](docs/architecture.md)
 - [Serialized contracts](docs/contracts.md)
+- [0.2.4 release notes](docs/releases/0.2.4.md)
 - [0.2.3 release notes](docs/releases/0.2.3.md)
 - [0.2.2 release notes](docs/releases/0.2.2.md)
 - [0.2.1 release notes](docs/releases/0.2.1.md)

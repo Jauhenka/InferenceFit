@@ -88,6 +88,26 @@ reserved `model`, `messages`, and `stream` parameter behavior still applies. Unk
 an explicit URL remain deprecated backward compatibility; new arbitrary endpoints use
 `provider: custom`.
 
+## Native Anthropic Messages in 0.2.4
+
+`provider: anthropic` selects the native non-streaming Anthropic Messages adapter;
+`provider: claude` is an alias for the same adapter. The serialized candidate still uses schema
+version `"0.1"` and retains the authored provider spelling. Observations report canonical
+`anthropic`.
+Model IDs are opaque and never infer a provider. The optional `credential_ref` resolves before the
+`ANTHROPIC_API_KEY` fallback; its existing persistence contract remains unchanged, while resolved
+secret values are never serialized or logged. An explicit `base_url` retains the old generic
+chat-completions override, so native Messages candidates omit it.
+
+The adapter moves leading system messages to the top-level `system` field and preserves ordered
+user/assistant text messages. Later system messages, named messages, and only-system cases fail
+before HTTP. `model`, `messages`, `system`, and `stream` are reserved parameters. `max_tokens` is
+required by the API and defaults to 1024 when omitted; `max_output_tokens` is an alias. No
+temperature is added implicitly. Response text blocks, returned model, latency, and available
+usage are normalized. Cached input counts are included in `usage.input_tokens` when reported.
+Configured pricing can estimate cost with complete usage; it does not represent cache-specific
+rates. Otherwise cost remains unknown. Errors use shared safe classification and bounded retries.
+
 ## Evaluation and routing semantics
 
 JSON Pointer fields follow RFC 6901, including `~0` and `~1` escaping. Dataset hashing uses canonical JSON with sorted keys and compact separators, one newline-delimited record at a time. Nearest-rank percentiles use `ceil(p * n)` with a minimum rank of one.

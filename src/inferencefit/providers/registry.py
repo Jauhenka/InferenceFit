@@ -9,6 +9,7 @@ from pathlib import Path
 from inferencefit.contracts import CandidateSpec
 from inferencefit.credentials import EnvironmentCredentialResolver
 
+from .anthropic import AnthropicProvider
 from .base import ProviderAdapter
 from .fixture import FixtureProvider
 from .openai_compatible import PRESET_URLS, OpenAICompatibleProvider
@@ -16,6 +17,8 @@ from .openai_responses import OpenAIResponsesProvider
 from .openrouter import OpenRouterProvider
 
 _BUILDERS: dict[str, Callable[[str | None], ProviderAdapter]] = {
+    "anthropic": AnthropicProvider,
+    "claude": AnthropicProvider,
     "openrouter": OpenRouterProvider,
     "gemini": OpenAICompatibleProvider,
     "openai": OpenAIResponsesProvider,

@@ -1,0 +1,8 @@
+schema_version: "0.1"
+dataset: {path: cases.jsonl}
+candidates:
+  - id: claude-smoke
+    provider: anthropic
+    model: <claude-model-id>
+    parameters: {max_tokens: 64}
+execution: {retry: {max_attempts: 1}}

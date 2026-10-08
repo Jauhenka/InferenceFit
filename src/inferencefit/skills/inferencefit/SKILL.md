@@ -27,6 +27,10 @@ run proves the evaluation plumbing; it does not recommend a model.
    services. Model availability can change; check current provider documentation or a live model
    catalog and never assume a model ID from memory. Evaluate their quality, latency, reliability,
    and known or unknown cost through the same benchmark workflow.
+   Anthropic (Claude) uses native Messages requests: choose `provider: anthropic` or its
+   `provider: claude` alias, set `ANTHROPIC_API_KEY`, and provide a current native model ID.
+   Model names never select a provider by themselves. Keep requests non-streaming and set a
+   bounded `max_tokens`; check current pricing before a live run.
 4. Select validators from trustworthy evidence. Read
    [validator selection](references/validators.md) before using approximate checks or custom code.
 5. Check required credential presence by documented variable name or opaque `credential_ref`.

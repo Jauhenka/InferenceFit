@@ -195,7 +195,7 @@ def test_package_job_checks_twine_and_audits_expected_version() -> None:
     commands = step_commands(job(workflow, "package"))
     joined = "\n".join(commands)
     assert "python -m twine check dist/*" in joined
-    assert "scripts/audit_distribution.py dist --expected-version 0.2.3" in joined
+    assert "scripts/audit_distribution.py dist --expected-version 0.2.4" in joined
 
 
 def test_package_commands_run_in_release_gate_order() -> None:
@@ -206,12 +206,12 @@ def test_package_commands_run_in_release_gate_order() -> None:
         "rm -rf dist build",
         "python -m build",
         "python -m twine check dist/*",
-        "python scripts/audit_distribution.py dist --expected-version 0.2.3",
+        "python scripts/audit_distribution.py dist --expected-version 0.2.4",
         (
             "python scripts/verify_artifact_install.py "
-            "dist/inferencefit-0.2.3-py3-none-any.whl 0.2.3 ."
+            "dist/inferencefit-0.2.4-py3-none-any.whl 0.2.4 ."
         ),
-        ("python scripts/verify_artifact_install.py dist/inferencefit-0.2.3.tar.gz 0.2.3 ."),
+        ("python scripts/verify_artifact_install.py dist/inferencefit-0.2.4.tar.gz 0.2.4 ."),
     ]
     assert all(command in commands for command in required)
     assert [commands.index(command) for command in required] == sorted(
@@ -226,7 +226,7 @@ def test_package_commands_run_in_release_gate_order() -> None:
     sdist_index = next(
         index
         for index, step in enumerate(package_job["steps"])
-        if "inferencefit-0.2.3.tar.gz" in step.get("run", "")
+        if "inferencefit-0.2.4.tar.gz" in step.get("run", "")
     )
     assert upload_index > sdist_index
 
@@ -245,8 +245,8 @@ def test_package_job_verifies_wheel_and_sdist_with_positional_interface() -> Non
 
     for command in verifications:
         normalized = re.sub(r"\s+", " ", command).strip()
-        assert normalized.endswith("0.2.3 ."), (
-            "verifier must receive the positional '<artifact> 0.2.3 .' interface"
+        assert normalized.endswith("0.2.4 ."), (
+            "verifier must receive the positional '<artifact> 0.2.4 .' interface"
         )
 
 
@@ -322,7 +322,7 @@ def test_release_build_derives_and_confirms_tag_version() -> None:
 def test_testpypi_build_confirms_fixed_release_candidate_version() -> None:
     workflow = load_workflow(TESTPYPI_WORKFLOW_PATH)
     joined = "\n".join(step_commands(job(workflow, "build")))
-    assert "RELEASE_VERSION=0.2.3" in joined
+    assert "RELEASE_VERSION=0.2.4" in joined
     assert "inferencefit.__version__" in joined
     assert "['project']['version']" not in joined
 
