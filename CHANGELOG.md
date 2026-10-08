@@ -2,6 +2,15 @@
 
 All notable changes to InferenceFit are documented in this file.
 
+## 0.2.4
+
+Native Anthropic (Claude) provider release. See [0.2.4 release notes](docs/releases/0.2.4.md).
+
+- Add `provider: anthropic` and `provider: claude` alias through one native Messages adapter.
+- Resolve `ANTHROPIC_API_KEY`, normalize text and token usage, and preserve shared benchmark
+  artifacts, retries, and safe errors.
+- Add a bounded example, Agent Skill guidance, offline tests, and installed-distribution checks.
+
 ## 0.2.3
 
 Decentralized inference provider profiles. See [0.2.3 release notes](docs/releases/0.2.3.md).

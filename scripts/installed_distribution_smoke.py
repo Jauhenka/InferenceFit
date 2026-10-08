@@ -308,6 +308,25 @@ def assert_named_decentralized_profiles() -> dict[str, str]:
     return actual
 
 
+def assert_anthropic_profiles() -> dict[str, str]:
+    """Confirm the installed package routes both Anthropic names to one native adapter."""
+    from inferencefit.contracts import CandidateSpec
+    from inferencefit.providers import AnthropicProvider, create_provider
+
+    class NoCredentialResolver:
+        def resolve(self, _reference: str | None, _provider: str) -> None:
+            return None
+
+    actual = {}
+    for provider in ("anthropic", "claude"):
+        candidate = CandidateSpec(id=provider, provider=provider, model="opaque-model-id")
+        adapter = create_provider(candidate, spec_dir=Path.cwd(), resolver=NoCredentialResolver())
+        if type(adapter) is not AnthropicProvider:
+            raise RuntimeError(f"{provider} did not select the native Anthropic adapter")
+        actual[provider] = type(adapter).__name__
+    return actual
+
+
 def main(expected_version: str, source_root: Path | None) -> int:
     import inferencefit
 
@@ -378,6 +397,7 @@ def main(expected_version: str, source_root: Path | None) -> int:
         skill_result = run_checked([executable, "skill", "path"], workdir)
         assert_packaged_skill_path(skill_result.stdout, Path(inferencefit.__file__).parent)
         assert_named_decentralized_profiles()
+        assert_anthropic_profiles()
         run_custom_smoke(executable, workdir)
     return 0
 

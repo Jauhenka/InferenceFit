@@ -32,7 +32,7 @@ environment are matched claims rather than descriptive labels.
 4. In [PyPI's pending-publisher settings](https://pypi.org/manage/account/publishing/), add the
    production identity from the table.
 5. Re-open both index settings and the two GitHub environments and compare every field with the
-   table. Record that verification with the 0.2.3 release evidence.
+   table. Record that verification with the 0.2.4 release evidence.
 
 For a first release, a pending publisher creates the project on its first successful upload. It
 does **not** create the project or reserve the name when configured. If `inferencefit` already
@@ -42,7 +42,7 @@ pending publisher grants access.
 ## TestPyPI rehearsal
 
 Do this once, after the reviewed release branch has been merged into `main` and before creating
-the production tag. TestPyPI distribution files are immutable, so do not upload `0.2.3` from a
+the production tag. TestPyPI distribution files are immutable, so do not upload `0.2.4` from a
 pre-merge commit and then attempt to replace it from a different merged commit.
 
 1. Confirm `main` contains the reviewed `.github/workflows/testpypi.yml`. Record the exact current
@@ -58,21 +58,21 @@ pre-merge commit and then attempt to replace it from a different merged commit.
 
    ```text
    python -m venv .venv-testpypi
-   .venv-testpypi\Scripts\python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "inferencefit==0.2.3"
-   .venv-testpypi\Scripts\python -c "import inferencefit; assert inferencefit.__version__ == '0.2.3'; print(inferencefit.__version__)"
+   .venv-testpypi\Scripts\python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "inferencefit==0.2.4"
+   .venv-testpypi\Scripts\python -c "import inferencefit; assert inferencefit.__version__ == '0.2.4'; print(inferencefit.__version__)"
    .venv-testpypi\Scripts\inferencefit --help
    ```
 
    On POSIX, use `.venv-testpypi/bin/python` and `.venv-testpypi/bin/inferencefit` instead. Verify
-   that the reported version is exactly `0.2.3` and that the CLI help exits successfully.
+   that the reported version is exactly `0.2.4` and that the CLI help exits successfully.
 6. Record the exact commit SHA, workflow run URL, conclusion, installed version, and CLI result in
-   the 0.2.3 release evidence. A changed `main` SHA, missing publisher, failed upload, ambiguous
+   the 0.2.4 release evidence. A changed `main` SHA, missing publisher, failed upload, ambiguous
    package ownership, or failed install is a release blocker.
 
 ## Production release
 
 Production publishing is deliberately tag-triggered and requires manual approval. Perform these
-steps only after the release checklist says `READY_FOR_0.2.3`.
+steps only after the release checklist says `READY_FOR_0.2.4`.
 
 1. Push the reviewed release branch and merge it into `main` through the repository's normal
    reviewed process. Record the exact resulting `main` commit SHA; a squash or merge commit is a
@@ -80,7 +80,7 @@ steps only after the release checklist says `READY_FOR_0.2.3`.
 2. Require green CI for that exact `main` commit, including Python 3.11–3.13, Windows,
    lint/format, build, Twine, archive audit, and installed wheel/sdist checks.
 3. Run the TestPyPI workflow on that same exact `main` commit and require a successful, recorded
-   rehearsal of `inferencefit==0.2.3`. If the merge changed the commit SHA, a branch rehearsal is
+   rehearsal of `inferencefit==0.2.4`. If the merge changed the commit SHA, a branch rehearsal is
    not sufficient.
 4. Confirm the PyPI Trusted Publisher and GitHub `pypi` environment match the table above, and
    confirm required reviewers/manual approval is active.
@@ -95,17 +95,17 @@ steps only after the release checklist says `READY_FOR_0.2.3`.
    if ((git rev-parse HEAD).Trim() -ne $verifiedReleaseSha) { throw "main is not the verified release commit" }
    $workingTreeChanges = git status --porcelain
    if ($workingTreeChanges) { throw "working tree is not clean" }
-   git tag -a v0.2.3 -m "InferenceFit 0.2.3"
-   git push origin v0.2.3
+   git tag -a v0.2.4 -m "InferenceFit 0.2.4"
+   git push origin v0.2.4
    ```
 
-6. In the `release.yml` run, verify the tag-derived version is `0.2.3` and that every build and
+6. In the `release.yml` run, verify the tag-derived version is `0.2.4` and that every build and
    verification job is green. Before approving the `pypi` environment, confirm that the publish
    job downloads the already-verified `python-distributions` artifact and does not rebuild it.
 7. A required reviewer then grants the production environment's manual approval. Verify the PyPI
    project page and a clean installation after publication.
 
-Do not manually dispatch `release.yml`; production is triggered only by the pushed `v0.2.3` tag.
+Do not manually dispatch `release.yml`; production is triggered only by the pushed `v0.2.4` tag.
 Do not push the tag until all preceding gates are complete.
 
 ## Failure and rollback boundary
@@ -115,9 +115,9 @@ publisher identity differs from the expected release. Correct the release candid
 
 Once a distribution file is published to PyPI, it cannot be replaced with different content.
 Deleting or yanking a release does not make the same filename/version safely reusable. If the
-published `0.2.3` release is wrong, stop publication, document the incident, fix the repository,
+published `0.2.4` release is wrong, stop publication, document the incident, fix the repository,
 increment to a new version, and release new artifacts through the complete process. Never attempt
-to overwrite `0.2.3`.
+to overwrite `0.2.4`.
 
 References: [PyPA's Trusted Publishing workflow guide](https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/),
 [PyPI pending publishers](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/),

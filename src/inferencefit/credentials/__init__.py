@@ -8,6 +8,8 @@ import re
 from inferencefit.errors import MissingCredentialError
 
 _FALLBACKS = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "claude": "ANTHROPIC_API_KEY",
     "chutes": "CHUTES_API_KEY",
     "deepseek": "DEEPSEEK_API_KEY",
     "fireworks": "FIREWORKS_API_KEY",

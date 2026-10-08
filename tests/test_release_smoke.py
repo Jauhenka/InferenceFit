@@ -23,9 +23,9 @@ async def test_api_reports_current_release_version():
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         health = await client.get("/health")
-        assert health.json() == {"status": "ok", "version": "0.2.3"}
+        assert health.json() == {"status": "ok", "version": "0.2.4"}
         schema = await client.get("/openapi.json")
-        assert schema.json()["info"]["version"] == "0.2.3"
+        assert schema.json()["info"]["version"] == "0.2.4"
 
 
 async def test_fixture_manifest_reports_current_release_version(tmp_path):
@@ -36,7 +36,7 @@ async def test_fixture_manifest_reports_current_release_version(tmp_path):
     manifest = json.loads(
         (tmp_path / "runs" / result.run_id / "manifest.json").read_text(encoding="utf-8")
     )
-    assert manifest["inferencefit_version"] == "0.2.3"
+    assert manifest["inferencefit_version"] == "0.2.4"
     assert manifest["schema_version"] == "0.1"
 
 
