@@ -22,13 +22,13 @@ def test_release_version_has_one_maintained_source() -> None:
     assert "version" not in config["project"]
     assert config["project"]["dynamic"] == ["version"]
     assert config["tool"]["hatch"]["version"]["path"] == "src/inferencefit/__init__.py"
-    assert inferencefit.__version__ == "0.2.4"
+    assert inferencefit.__version__ == "0.2.5"
 
 
 @pytest.mark.parametrize(
     "required",
     [
-        "InferenceFit 0.2.4",
+        "InferenceFit 0.2.5",
         "Fireworks",
         "DeepSeek",
         "OpenRouter",
@@ -135,9 +135,9 @@ def test_agent_ux_release_notes_and_changelog_are_scoped() -> None:
 
 def test_release_guide_uses_current_rehearsal_and_tag_examples() -> None:
     content = (ROOT / "docs" / "releasing.md").read_text(encoding="utf-8")
-    assert "inferencefit==0.2.4" in content
-    assert "v0.2.4" in content
-    assert "READY_FOR_0.2.4" in content
+    assert "inferencefit==0.2.5" in content
+    assert "v0.2.5" in content
+    assert "READY_FOR_0.2.5" in content
 
 
 def test_generic_provider_release_notes_and_changelog_are_scoped() -> None:
@@ -165,7 +165,7 @@ def test_packaged_skill_validator_reference_names_current_release() -> None:
     content = (ROOT / "src/inferencefit/skills/inferencefit/references/validators.md").read_text(
         encoding="utf-8"
     )
-    assert "version 0.2.4 has no built-in semantic" in content
+    assert "version 0.2.5 has no built-in semantic" in content
 
 
 def test_decentralized_provider_release_guidance_and_examples() -> None:

@@ -257,3 +257,131 @@ async def test_transport_failures_are_retryable_and_safe(respx_mock, error, kind
         await AnthropicProvider("test-secret").complete(candidate(), case(), 0)
     assert (caught.value.kind, caught.value.retryable) == (kind, True)
     assert "test-secret" not in str(caught.value)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provider", ["anthropic", "claude"])
+@pytest.mark.parametrize("workspace", [None, "", "wrkspc_test123"])
+async def test_workspace_header_for_both_names(
+    provider, workspace, tmp_path, monkeypatch, respx_mock
+):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-secret")
+    if workspace is None:
+        monkeypatch.delenv("ANTHROPIC_WORKSPACE_ID", raising=False)
+    else:
+        monkeypatch.setenv("ANTHROPIC_WORKSPACE_ID", workspace)
+    route = respx_mock.post(URL).mock(return_value=httpx.Response(200, json=response()))
+    adapter = create_provider(
+        candidate(provider), spec_dir=tmp_path, resolver=EnvironmentCredentialResolver()
+    )
+    await adapter.complete(candidate(provider), case(), 0)
+    headers = route.calls[0].request.headers
+    assert headers["x-api-key"] == "test-secret"
+    if not workspace:
+        assert "anthropic-workspace-id" not in headers
+    else:
+        assert headers["anthropic-workspace-id"] == workspace
+
+
+@pytest.mark.asyncio
+async def test_invalid_workspace_header_fails_safely_before_http(monkeypatch, respx_mock):
+    from inferencefit.providers import AnthropicProvider
+
+    monkeypatch.setenv("ANTHROPIC_WORKSPACE_ID", "wrkspc_test\r\nx-api-key: stolen")
+    with pytest.raises(ProviderError) as caught:
+        await AnthropicProvider("test-secret").complete(candidate(), case(), 0)
+    assert caught.value.kind == "configuration"
+    assert "stolen" not in str(caught.value)
+    assert not respx_mock.calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "native,normalized",
+    [
+        ("end_turn", "stop"),
+        ("stop_sequence", "stop"),
+        ("max_tokens", "length"),
+        ("tool_use", "tool_calls"),
+        ("pause_turn", "pause"),
+        ("refusal", "refusal"),
+        ("model_context_window_exceeded", "length"),
+        ("future_stop_reason", None),
+    ],
+)
+async def test_native_stop_reason_preserved_and_normalized(respx_mock, native, normalized):
+    from inferencefit.providers import AnthropicProvider
+
+    respx_mock.post(URL).mock(return_value=httpx.Response(200, json=response(stop_reason=native)))
+    result = await AnthropicProvider().complete(candidate(), case(), 0)
+    assert result.provider_finish_reason == native
+    assert result.finish_reason == normalized
+    assert result.raw_response["stop_reason"] == native
+
+
+@pytest.mark.asyncio
+async def test_native_response_keeps_thinking_text_request_id_and_cache_usage(respx_mock):
+    from inferencefit.providers import AnthropicProvider
+
+    native = response(
+        stop_reason="end_turn",
+        content=[
+            {"type": "thinking", "thinking": "first", "signature": "opaque"},
+            {"type": "text", "text": "Hello"},
+            {"type": "thinking", "thinking": "second", "signature": "opaque2"},
+            {"type": "text", "text": " back"},
+        ],
+        usage={
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 5,
+            "cache_read_input_tokens": 7,
+            "output_tokens": 10,
+        },
+    )
+    respx_mock.post(URL).mock(
+        return_value=httpx.Response(200, json=native, headers={"request-id": "req-native-123"})
+    )
+    result = await AnthropicProvider().complete(candidate(), case(), 0)
+    assert result.raw_output == "Hello back"
+    assert result.raw_response == native
+    assert result.reasoning_content == "first\n\nsecond"
+    assert result.reasoning_tokens is None  # Anthropic usage did not separately report these.
+    assert result.provider_request_id == "req-native-123"
+    assert result.usage_details == native["usage"]
+    assert (result.input_tokens, result.output_tokens, result.total_tokens) == (15, 10, 25)
+
+
+@pytest.mark.asyncio
+async def test_missing_native_metadata_stays_none(respx_mock):
+    from inferencefit.providers import AnthropicProvider
+
+    respx_mock.post(URL).mock(return_value=httpx.Response(200, json=response()))
+    result = await AnthropicProvider().complete(candidate(), case(), 0)
+    assert result.finish_reason is None
+    assert result.provider_finish_reason is None
+    assert result.provider_request_id is None
+    assert result.reasoning_tokens is None
+    assert result.reasoning_content is None
+
+
+@pytest.mark.asyncio
+async def test_new_native_artifact_fields_redact_echoed_api_key(respx_mock):
+    from inferencefit.providers import AnthropicProvider
+
+    native = response(metadata={"authorization": "Bearer test-secret", "note": "test-secret"})
+    respx_mock.post(URL).mock(return_value=httpx.Response(200, json=native))
+    result = await AnthropicProvider("test-secret").complete(candidate(), case(), 0)
+    assert "test-secret" not in json.dumps(result.raw_response)
+    assert result.raw_response["content"] == native["content"]
+
+
+@pytest.mark.asyncio
+async def test_explicit_reasoning_count_does_not_change_total_output(respx_mock):
+    from inferencefit.providers import AnthropicProvider
+
+    native = response(usage={"input_tokens": 2, "output_tokens": 10, "reasoning_tokens": 7})
+    respx_mock.post(URL).mock(return_value=httpx.Response(200, json=native))
+    result = await AnthropicProvider().complete(candidate(), case(), 0)
+    assert result.reasoning_tokens == 7
+    assert result.output_tokens == 10
+    assert result.total_tokens == 12

@@ -8,6 +8,13 @@ from inferencefit.contracts import CandidateSpec, TestCase
 
 from .base import ProviderError, ProviderResponse
 from .http_errors import provider_error_from_response
+from .metadata import (
+    nonempty_string,
+    nonnegative_token_count,
+    normalize_finish_reason,
+    provider_request_id,
+    safe_native_response,
+)
 
 PRESET_URLS = {
     "chutes": "https://llm.chutes.ai/v1",
@@ -75,6 +82,25 @@ class OpenAICompatibleProvider:
                 value = usage.get(name)
                 return value if type(value) is int and value >= 0 else None
 
+            native = safe_native_response(data, self.credential)
+            native_usage = native.get("usage")
+            native_choice = native["choices"][0]
+            native_reason = nonempty_string(native_choice.get("finish_reason"))
+            message = native_choice.get("message")
+            reasoning_content = (
+                nonempty_string(message.get("reasoning_content"))
+                if isinstance(message, dict)
+                else None
+            )
+            details = usage.get("completion_tokens_details")
+            if not isinstance(details, dict):
+                details = usage.get("output_tokens_details")
+            reasoning_tokens = (
+                nonnegative_token_count(details.get("reasoning_tokens"))
+                if isinstance(details, dict)
+                else None
+            )
+
             return ProviderResponse(
                 raw_output=content,
                 latency_ms=(time.perf_counter() - started) * 1000,
@@ -83,6 +109,13 @@ class OpenAICompatibleProvider:
                 total_tokens=token_count("total_tokens"),
                 provider=candidate.provider,
                 model=model,
+                raw_response=native,
+                finish_reason=normalize_finish_reason(native_reason),
+                provider_finish_reason=native_reason,
+                provider_request_id=provider_request_id(response, self.credential),
+                reasoning_tokens=reasoning_tokens,
+                reasoning_content=reasoning_content,
+                usage_details=native_usage if isinstance(native_usage, dict) else None,
                 **self._response_metadata(data),
             )
         except ProviderError:

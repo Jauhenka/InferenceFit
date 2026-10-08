@@ -10,6 +10,12 @@ from inferencefit.contracts import CandidateSpec, TestCase
 
 from .base import ProviderError, ProviderResponse
 from .http_errors import provider_error_from_response
+from .metadata import (
+    nonempty_string,
+    nonnegative_token_count,
+    provider_request_id,
+    safe_native_response,
+)
 
 
 class OpenAIResponsesProvider:
@@ -100,6 +106,36 @@ class OpenAIResponsesProvider:
                 value = usage.get(name)
                 return value if type(value) is int and value >= 0 else None
 
+            native = safe_native_response(data, self.credential)
+            native_usage = native.get("usage")
+            details = usage.get("output_tokens_details")
+            reasoning_tokens = (
+                nonnegative_token_count(details.get("reasoning_tokens"))
+                if isinstance(details, dict)
+                else None
+            )
+            reasoning_texts = []
+            for item in native["output"]:
+                if item.get("type") != "reasoning":
+                    continue
+                for field, block_type in (
+                    ("content", "reasoning_text"),
+                    ("summary", "summary_text"),
+                ):
+                    blocks = item.get(field)
+                    if isinstance(blocks, list):
+                        texts = [
+                            block["text"]
+                            for block in blocks
+                            if isinstance(block, dict)
+                            and block.get("type") == block_type
+                            and nonempty_string(block.get("text"))
+                        ]
+                        if texts:
+                            reasoning_texts.extend(texts)
+                            break
+            native_status = nonempty_string(native.get("status"))
+
             return ProviderResponse(
                 raw_output=raw_output,
                 latency_ms=(time.perf_counter() - started) * 1000,
@@ -108,6 +144,13 @@ class OpenAIResponsesProvider:
                 total_tokens=token_count("total_tokens"),
                 provider="openai",
                 model=model,
+                raw_response=native,
+                finish_reason="stop" if native_status == "completed" else None,
+                provider_finish_reason=native_status,
+                provider_request_id=provider_request_id(response, self.credential),
+                reasoning_tokens=reasoning_tokens,
+                reasoning_content="\n\n".join(reasoning_texts) if reasoning_texts else None,
+                usage_details=native_usage if isinstance(native_usage, dict) else None,
             )
         except ProviderError:
             raise

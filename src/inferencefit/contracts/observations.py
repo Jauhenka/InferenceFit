@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from .common import SCHEMA_VERSION
 from .validation import ValidationSummary
@@ -39,6 +39,13 @@ class Observation(BaseModel):
     provider: str | None = None
     model: str | None = None
     provider_backend: str | None = None
+    raw_response: JsonValue | None = None
+    finish_reason: str | None = None
+    provider_finish_reason: str | None = None
+    provider_request_id: str | None = None
+    reasoning_tokens: int | None = None
+    reasoning_content: str | None = None
+    usage_details: dict[str, JsonValue] | None = None
     cost_source: Literal["provider_reported", "configured_pricing"] | None = None
     provider_attempts: int = 1
     validation: ValidationSummary | None = None

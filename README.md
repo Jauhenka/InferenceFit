@@ -6,7 +6,7 @@ test cases against candidate providers and models, measures quality, reliability
 use, and cost, applies your hard constraints, and produces a deterministic recommendation and an
 open routing policy.
 
-InferenceFit 0.2.4 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
+InferenceFit 0.2.5 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
 
 ## Installation
 
@@ -39,7 +39,7 @@ overwrites an existing destination.
 
 ## Agent Skill
 
-InferenceFit 0.2.4 also packages a portable Agent Skill for agents that prepare or interpret
+InferenceFit 0.2.5 also packages a portable Agent Skill for agents that prepare or interpret
 workload-specific evaluations. Locate it with:
 
 ```bash
@@ -213,6 +213,21 @@ and complete usage. Static pricing is only an estimate and does not account for 
 rates. See the [Anthropic example](examples/anthropic/README.md). An explicit `base_url` retains
 the existing generic chat-completions override, so omit it for the native Messages API.
 
+For a multi-workspace key, set `ANTHROPIC_WORKSPACE_ID`. The native adapter sends its value as
+`anthropic-workspace-id` for both `provider: anthropic` and `provider: claude`. Leave it unset for
+a single-workspace key. The workspace header and API key are never copied into artifacts.
+
+### Provider-native audit data
+
+Each successful `observations.jsonl` row can include optional `raw_response`,
+`finish_reason`, `provider_finish_reason`, `provider_request_id`, `reasoning_tokens`,
+`reasoning_content`, and `usage_details`. The native JSON retains returned content blocks and
+usage, with credentials redacted. Only reasoning actually exposed by the API is recorded;
+missing fields are `null`. `usage.output_tokens` remains total provider output, including any
+reasoning tokens the provider counts. The aggregate `result.json` remains a summary. Existing
+schema version `"0.1"` observations continue to load. See [serialized contracts](docs/contracts.md)
+for field semantics and the 0.2.5 provider coverage.
+
 ### Decentralized inference providers
 
 The `chutes`, `morpheus`, and `nosana` identifiers select hosted OpenAI-compatible gateways backed
@@ -304,7 +319,7 @@ do not expose it to a network.
 
 ## Current limitations
 
-Version 0.2.4 uses a local process job manager and filesystem artifact store. It supports
+Version 0.2.5 uses a local process job manager and filesystem artifact store. It supports
 non-streaming chat completions, OpenAI Responses text output, and Anthropic Messages text output,
 a single two-stage fallback,
 and Python only. Cost uses reported request cost where available, then static configured prices;
@@ -312,7 +327,7 @@ it is not an invoice reconciliation system. Exact validators intentionally do no
 semantic-equivalence scoring. There is no hosted Cloud/SaaS service, account system, traffic proxy,
 browser UI, distributed worker system, learned routing, or model training.
 
-## Roadmap (not available in 0.2.4)
+## Roadmap (not available in 0.2.5)
 
 Potential future work includes richer request modalities, more provider-specific metadata,
 scalable artifact-store adapters, and additional language SDKs. These are directions, not current
@@ -351,6 +366,7 @@ Detailed references:
 
 - [Architecture](docs/architecture.md)
 - [Serialized contracts](docs/contracts.md)
+- [0.2.5 release notes](docs/releases/0.2.5.md)
 - [0.2.4 release notes](docs/releases/0.2.4.md)
 - [0.2.3 release notes](docs/releases/0.2.3.md)
 - [0.2.2 release notes](docs/releases/0.2.2.md)

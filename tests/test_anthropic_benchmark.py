@@ -51,9 +51,18 @@ execution: {{retry: {{max_attempts: 1}}}}
             200,
             json={
                 "model": "served-model-id",
-                "content": [{"type": "text", "text": output}],
-                "usage": {"input_tokens": 2, "output_tokens": 3},
+                "content": [
+                    {"type": "thinking", "thinking": "visible thought"},
+                    {"type": "text", "text": output},
+                ],
+                "stop_reason": "end_turn",
+                "usage": {
+                    "input_tokens": 2,
+                    "cache_read_input_tokens": 1,
+                    "output_tokens": 3,
+                },
             },
+            headers={"request-id": "req-benchmark"},
         )
     )
     result = await benchmark(
@@ -71,12 +80,26 @@ execution: {{retry: {{max_attempts: 1}}}}
         "served-model-id",
         output,
     )
-    assert row["usage"] == {"input_tokens": 2, "output_tokens": 3, "total_tokens": 5}
+    assert row["usage"] == {"input_tokens": 3, "output_tokens": 3, "total_tokens": 6}
+    assert row["raw_response"]["content"][0] == {
+        "type": "thinking",
+        "thinking": "visible thought",
+    }
+    assert row["provider_finish_reason"] == "end_turn"
+    assert row["finish_reason"] == "stop"
+    assert row["provider_request_id"] == "req-benchmark"
+    assert row["reasoning_content"] == "visible thought"
+    assert row["reasoning_tokens"] is None
+    assert row["usage_details"] == {
+        "input_tokens": 2,
+        "cache_read_input_tokens": 1,
+        "output_tokens": 3,
+    }
     assert route.calls[0].request.headers["x-api-key"] == secret
     assert result.candidate_summaries[0].provider_success_rate == 1
     if with_pricing:
         assert row["cost_source"] == "configured_pricing"
-        assert row["cost_usd"] == pytest.approx((2 * 3 + 3 * 5) / 1_000_000)
+        assert row["cost_usd"] == pytest.approx((3 * 3 + 3 * 5) / 1_000_000)
     else:
         assert row["cost_source"] is None
         assert row["cost_usd"] is None

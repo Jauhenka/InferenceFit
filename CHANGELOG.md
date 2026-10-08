@@ -2,6 +2,16 @@
 
 All notable changes to InferenceFit are documented in this file.
 
+## 0.2.5
+
+Anthropic workspace selection and auditable provider responses. See
+[0.2.5 release notes](docs/releases/0.2.5.md).
+
+- Add optional `ANTHROPIC_WORKSPACE_ID` request header for multi-workspace keys.
+- Preserve provider-native JSON, finish reasons, request IDs, exposed reasoning, and usage details
+  in optional observation fields without changing schema version `0.1` or aggregate rankings.
+- Enrich OpenAI Responses and the existing compatible chat path for Gemini, DeepSeek, and Fireworks.
+
 ## 0.2.4
 
 Native Anthropic (Claude) provider release. See [0.2.4 release notes](docs/releases/0.2.4.md).

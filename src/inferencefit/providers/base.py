@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from pydantic import JsonValue
+
 from inferencefit.contracts import CandidateSpec, TestCase
 
 
@@ -17,6 +19,13 @@ class ProviderResponse:
     total_tokens: int | None = None
     cost_usd: float | None = None
     provider_backend: str | None = None
+    raw_response: JsonValue | None = None
+    finish_reason: str | None = None
+    provider_finish_reason: str | None = None
+    provider_request_id: str | None = None
+    reasoning_tokens: int | None = None
+    reasoning_content: str | None = None
+    usage_details: dict[str, JsonValue] | None = None
 
 
 class ProviderError(Exception):
