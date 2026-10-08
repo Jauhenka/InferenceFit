@@ -108,6 +108,32 @@ usage are normalized. Cached input counts are included in `usage.input_tokens` w
 Configured pricing can estimate cost with complete usage; it does not represent cache-specific
 rates. Otherwise cost remains unknown. Errors use shared safe classification and bounded retries.
 
+## Optional provider-native audit fields in 0.2.5
+
+The serialized schema version remains `"0.1"`. Successful `Observation` records in
+`observations.jsonl` add nullable `raw_response` (provider-native JSON), `finish_reason` (a
+conservative common value), `provider_finish_reason` (original reason or status),
+`provider_request_id` (returned request identifier), `reasoning_tokens` (separately reported
+count), `reasoning_content` (only provider-exposed text), and `usage_details` (native usage JSON).
+Old records omit these fields and load with `null` defaults. The aggregate `result.json` does not
+duplicate per-request data. No change is made to normalized `raw_output`, input/output/total
+tokens, latency, cost, success/error, or ranking semantics. Total output tokens are not reduced by
+reasoning tokens or interpreted as final-answer-only tokens.
+
+Anthropic accepts `ANTHROPIC_WORKSPACE_ID` for native `provider: anthropic` and alias
+`provider: claude` requests, sending `anthropic-workspace-id` only when configured. An unset or
+empty value preserves single-workspace behavior. The workspace request header, API key, and other
+authorization headers are never persisted. Native response JSON is redacted for credential-bearing
+keys and echoed resolved API key values. Anthropic `stop_reason` and `request-id` are preserved,
+cache-related usage remains in `usage_details`, and only returned thinking blocks become
+`reasoning_content`; `reasoning_tokens` is `null` unless separately reported. OpenAI Responses
+exposes returned reasoning token counts and reasoning text or summaries. Gemini, DeepSeek, and
+Fireworks share chat-completions extraction: optional `finish_reason`, `reasoning_content`,
+reasoning token details, and request IDs are populated only if returned in their compatible
+responses. Unknown provider-native reasons remain in `provider_finish_reason` while
+`finish_reason` is `null`. `raw_response` preserves other native fields without fabricating
+unavailable reasoning metrics.
+
 ## Evaluation and routing semantics
 
 JSON Pointer fields follow RFC 6901, including `~0` and `~1` escaping. Dataset hashing uses canonical JSON with sorted keys and compact separators, one newline-delimited record at a time. Nearest-rank percentiles use `ceil(p * n)` with a minimum rank of one.

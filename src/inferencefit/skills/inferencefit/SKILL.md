@@ -31,6 +31,9 @@ run proves the evaluation plumbing; it does not recommend a model.
    `provider: claude` alias, set `ANTHROPIC_API_KEY`, and provide a current native model ID.
    Model names never select a provider by themselves. Keep requests non-streaming and set a
    bounded `max_tokens`; check current pricing before a live run.
+   For a multi-workspace key, set `ANTHROPIC_WORKSPACE_ID` so the native request includes
+   `anthropic-workspace-id`. Inspect `observations.jsonl` for returned `raw_response`,
+   `usage_details`, and optional reasoning data; never infer hidden reasoning when absent.
 4. Select validators from trustworthy evidence. Read
    [validator selection](references/validators.md) before using approximate checks or custom code.
 5. Check required credential presence by documented variable name or opaque `credential_ref`.

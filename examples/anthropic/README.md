@@ -3,6 +3,10 @@
 Set `ANTHROPIC_API_KEY`, replace `<claude-model-id>` in `eval.yaml` with a model ID currently
 available to your account, and run:
 
+For a multi-workspace key, also set `ANTHROPIC_WORKSPACE_ID`; the native adapter sends it as
+`anthropic-workspace-id`. Leave it unset for a single-workspace key. Do not put the key or workspace
+ID in the spec.
+
 ```bash
 inferencefit validate examples/anthropic/eval.yaml
 inferencefit benchmark examples/anthropic/eval.yaml

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import time
 from typing import Any
 
@@ -11,6 +12,13 @@ from inferencefit.contracts import CandidateSpec, TestCase
 
 from .base import ProviderError, ProviderResponse
 from .http_errors import provider_error_from_response
+from .metadata import (
+    nonempty_string,
+    nonnegative_token_count,
+    normalize_finish_reason,
+    provider_request_id,
+    safe_native_response,
+)
 
 _URL = "https://api.anthropic.com/v1/messages"
 _VERSION = "2023-06-01"
@@ -73,6 +81,11 @@ class AnthropicProvider:
         headers = {"anthropic-version": _VERSION}
         if self.credential:
             headers["x-api-key"] = self.credential
+        workspace_id = os.environ.get("ANTHROPIC_WORKSPACE_ID")
+        if workspace_id:
+            if any(ord(char) < 33 or ord(char) > 126 for char in workspace_id):
+                raise ProviderError("invalid Anthropic workspace ID", kind="configuration")
+            headers["anthropic-workspace-id"] = workspace_id
 
         started = time.perf_counter()
         try:
@@ -120,6 +133,15 @@ class AnthropicProvider:
             model = data.get("model")
             if not isinstance(model, str) or not model:
                 model = candidate.model
+            native = safe_native_response(data, self.credential)
+            native_blocks = native["content"]
+            thinking = [
+                block["thinking"]
+                for block in native_blocks
+                if block.get("type") == "thinking" and nonempty_string(block.get("thinking"))
+            ]
+            native_usage = native.get("usage")
+            native_reason = nonempty_string(native.get("stop_reason"))
             return ProviderResponse(
                 raw_output=content,
                 latency_ms=(time.perf_counter() - started) * 1000,
@@ -128,6 +150,13 @@ class AnthropicProvider:
                 total_tokens=total_tokens,
                 provider="anthropic",
                 model=model,
+                raw_response=native,
+                finish_reason=normalize_finish_reason(native_reason, anthropic=True),
+                provider_finish_reason=native_reason,
+                provider_request_id=provider_request_id(response, self.credential),
+                reasoning_tokens=nonnegative_token_count(usage.get("reasoning_tokens")),
+                reasoning_content="\n\n".join(thinking) if thinking else None,
+                usage_details=native_usage if isinstance(native_usage, dict) else None,
             )
         except ProviderError:
             raise

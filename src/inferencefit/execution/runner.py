@@ -77,6 +77,13 @@ async def _execute(
                 provider=response.provider,
                 model=response.model,
                 provider_backend=response.provider_backend,
+                raw_response=response.raw_response,
+                finish_reason=response.finish_reason,
+                provider_finish_reason=response.provider_finish_reason,
+                provider_request_id=response.provider_request_id,
+                reasoning_tokens=response.reasoning_tokens,
+                reasoning_content=response.reasoning_content,
+                usage_details=response.usage_details,
                 provider_attempts=attempts,
                 validation=validation,
             )
