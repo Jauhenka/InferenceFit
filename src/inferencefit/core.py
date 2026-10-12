@@ -10,7 +10,7 @@ import secrets
 from datetime import UTC, datetime
 from pathlib import Path
 
-from inferencefit.contracts import ResultBundle, RoutingPolicy
+from inferencefit.contracts import CandidateSpec, ResultBundle, RoutingPolicy
 from inferencefit.credentials import EnvironmentCredentialResolver
 from inferencefit.dataset import load_jsonl_dataset
 from inferencefit.execution import run_evaluations
@@ -36,6 +36,15 @@ def _hash(value) -> str:
 
 def new_run_id() -> str:
     return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + secrets.token_hex(3)
+
+
+def _resume_invocation_namespace(manifest: dict, candidates: list[CandidateSpec]) -> str:
+    namespace = manifest.get("invocation_namespace")
+    if isinstance(namespace, str) and namespace:
+        return namespace
+    if any(candidate.provider == "inferencefit-cloud" for candidate in candidates):
+        raise ValueError("Cloud resume requires the original invocation namespace")
+    return secrets.token_hex(16)
 
 
 async def benchmark(
@@ -73,8 +82,10 @@ async def benchmark(
             raise ValueError("resume spec or dataset is incompatible with the existing run")
         existing = store.observations(active_run_id)
         started = datetime.fromisoformat(manifest["started_at"])
+        invocation_namespace = _resume_invocation_namespace(manifest, spec.candidates)
     else:
         active_run_id = run_id or new_run_id()
+        invocation_namespace = secrets.token_hex(16)
         run_dir = store.create(active_run_id)
         existing = []
         store.atomic_yaml(
@@ -93,6 +104,7 @@ async def benchmark(
         "schema_version": "0.1",
         "inferencefit_version": __version__,
         "run_id": active_run_id,
+        "invocation_namespace": invocation_namespace,
         "started_at": started.isoformat(),
         "spec_hash": spec_hash,
         "dataset_hash": dataset.sha256,
@@ -112,7 +124,13 @@ async def benchmark(
 
     try:
         observations = await run_evaluations(
-            spec, list(dataset), provider_factory, store, active_run_id, existing=existing
+            spec,
+            list(dataset),
+            provider_factory,
+            store,
+            active_run_id,
+            existing=existing,
+            invocation_namespace=invocation_namespace,
         )
     except asyncio.CancelledError:
         manifest.update(status="cancelled", completed_at=datetime.now(UTC).isoformat())

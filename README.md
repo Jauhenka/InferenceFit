@@ -317,6 +317,23 @@ The daemon defaults to `127.0.0.1:8787` and exposes health, run creation, status
 cancellation endpoints. It has no authentication and is intended only for trusted localhost use;
 do not expose it to a network.
 
+## InferenceFit Cloud client (M2 development)
+
+The development branch adds `provider: inferencefit-cloud` to the ordinary benchmark workflow.
+Cloud candidates can be mixed with local fixtures and BYOK providers. Cloud requires a token
+issued by a separate, operator-managed InferenceFit Cloud service. Set `INFERENCEFIT_CLOUD_TOKEN`
+in the environment and use `inferencefit cloud status`, `cloud models`, and `cloud balance` to
+inspect connection, hosted IDs, and server-reported credits. No public account signup or payment
+flow is available. The client does not provide provider keys or run benchmarks remotely.
+
+The Cloud endpoint is configured outside evaluation YAML. For local development, set
+`INFERENCEFIT_CLOUD_API_URL=http://127.0.0.1:8000`. For an authorized remote HTTPS service,
+also set `INFERENCEFIT_CLOUD_TRUSTED_ORIGIN` to that exact origin; this deliberately trusts the
+operator with the token and workload data. Candidate-level `base_url` is rejected for Cloud.
+No production Cloud origin is assumed until the service owner confirms one. See the
+[mixed synthetic example](examples/cloud_mixed/README.md). Obtain user approval before sending
+sensitive data or consuming Cloud credits. A quote is not a guaranteed spending cap.
+
 ## Current limitations
 
 Version 0.2.5 uses a local process job manager and filesystem artifact store. It supports
@@ -324,8 +341,9 @@ non-streaming chat completions, OpenAI Responses text output, and Anthropic Mess
 a single two-stage fallback,
 and Python only. Cost uses reported request cost where available, then static configured prices;
 it is not an invoice reconciliation system. Exact validators intentionally do not provide
-semantic-equivalence scoring. There is no hosted Cloud/SaaS service, account system, traffic proxy,
-browser UI, distributed worker system, learned routing, or model training.
+semantic-equivalence scoring. The public package has no hosted Cloud backend or account system;
+those live in a separate service. There is no browser UI, distributed worker system, learned
+routing, or model training.
 
 ## Roadmap (not available in 0.2.5)
 

@@ -18,6 +18,7 @@ cover the hand-maintained compatibility and provider examples below.
 | Example | Purpose | Credential |
 | --- | --- | --- |
 | [Basic fixture workload](basic/eval.yaml) | Deterministic offline quick start and fallback | None |
+| [Mixed fixture and Cloud](cloud_mixed/README.md) | Synthetic local/hosted comparison using a Cloud catalog placeholder | `INFERENCEFIT_CLOUD_TOKEN` and an operator-provisioned account |
 | [Lead fixture workload](lead_semantic_units/eval.fixture.yaml) | Synthetic extraction with hidden expected units | None |
 | [Multilingual fixtures](lead_semantic_units/eval.multilingual.fixture.yaml) | Offline multilingual coverage | None |
 | [Fireworks smoke](lead_semantic_units/eval.fireworks.smoke.yaml) | Live chat completions | `FIREWORKS_API_KEY` |
