@@ -193,6 +193,8 @@ def demo_command(
         )
     typer.echo(f"Test cases: {len(workload)}; planned requests: {len(workload) * len(candidates)}")
     typer.echo(f"Estimated reservation: ${estimate:.6f}; budget: ${controller.limit_usd:.2f}")
+    if estimate > controller.limit_usd:
+        typer.echo("The full plan exceeds this budget estimate and may stop early.")
     input_total = sum(controller.input_token_estimate(case) for case in workload) * len(candidates)
     typer.echo(
         f"Estimated input tokens: {input_total}; output token limit: "
@@ -251,6 +253,8 @@ def demo_command(
     typer.echo(f"Artifacts: .inferencefit/runs/{result.run_id}")
     typer.echo("Small smoke test only; use more representative cases before selecting a model.")
     typer.echo("Next: inferencefit init --preset structured-extraction ./eval")
+    if controller.stopped or controller.failed or controller.uncertain:
+        raise typer.Exit(1)
 
 
 @app.command("validate")

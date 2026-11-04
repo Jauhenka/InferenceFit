@@ -90,6 +90,8 @@ class BudgetController:
         else:
             self.known_usd += observation.cost_usd
         self.in_flight = 0.0
+        if self.known_usd + self.uncertain_usd > self.limit_usd:
+            self.stopped = True
 
     def interrupt(self) -> None:
         if self.in_flight:

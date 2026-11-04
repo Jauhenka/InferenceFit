@@ -191,7 +191,11 @@ async def benchmark(
     result = ResultBundle(
         run_id=active_run_id,
         started_at=started,
-        status="failed" if budget is not None and budget.stopped else "completed",
+        status=(
+            "failed"
+            if budget is not None and (budget.stopped or budget.failed or budget.uncertain)
+            else "completed"
+        ),
         provenance={"spec_hash": spec_hash, "dataset_hash": dataset.sha256},
         constraints=constraints,
         candidate_summaries=candidate_summaries,
@@ -210,7 +214,11 @@ async def benchmark(
     )
     store._atomic_text(run_dir / "summary.md", render_markdown(result))
     manifest.update(
-        status="incomplete" if budget is not None and budget.stopped else "completed",
+        status=(
+            "incomplete"
+            if budget is not None and (budget.stopped or budget.failed or budget.uncertain)
+            else "completed"
+        ),
         completed_at=result.completed_at.isoformat(),
         planned_observations=len(dataset) * len(spec.candidates) * spec.execution.repetitions,
     )

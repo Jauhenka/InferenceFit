@@ -124,7 +124,7 @@ def test_partial_failure_and_missing_usage(monkeypatch, tmp_path):
 
     monkeypatch.setattr(core, "create_provider", lambda *a, **kw: FakeProvider())
     result = CliRunner().invoke(app, ["demo", "--live", "--yes", "--budget", "0.25"])
-    assert result.exit_code == 0, (result.output, result.exception)
+    assert result.exit_code != 0, (result.output, result.exception)
     assert "failures: 1; uncertain: 8" in result.output
     assert "no recommendation" in result.output
     assert "uncertain reservation: $0.000000" not in result.output
@@ -148,7 +148,7 @@ def test_budget_stops_between_requests(monkeypatch, tmp_path):
 
     monkeypatch.setattr(core, "create_provider", lambda *a, **kw: FakeProvider())
     result = CliRunner().invoke(app, ["demo", "--live", "--yes", "--budget", "0.0001"])
-    assert result.exit_code == 0, (result.output, result.exception)
+    assert result.exit_code != 0, (result.output, result.exception)
     assert 0 < len(calls) < 8
     assert "Budget exhaustion: True" in result.output
     assert "no recommendation" in result.output
@@ -170,7 +170,7 @@ def test_budget_stop_artifacts_record_planned_work_and_reason(monkeypatch, tmp_p
 
     monkeypatch.setattr(core, "create_provider", lambda *a, **kw: FakeProvider())
     result = CliRunner().invoke(app, ["demo", "--live", "--yes", "--budget", "0.0001"])
-    assert result.exit_code == 0, (result.output, result.exception)
+    assert result.exit_code != 0, (result.output, result.exception)
     run_dir = next((tmp_path / ".inferencefit" / "runs").iterdir())
     manifest = json.loads((run_dir / "manifest.json").read_text())
     bundle = json.loads((run_dir / "result.json").read_text())
