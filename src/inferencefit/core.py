@@ -14,6 +14,7 @@ from inferencefit.contracts import CandidateSpec, ResultBundle, RoutingPolicy
 from inferencefit.credentials import EnvironmentCredentialResolver
 from inferencefit.dataset import load_jsonl_dataset
 from inferencefit.execution import run_evaluations
+from inferencefit.execution.budget import BudgetController
 from inferencefit.metrics import aggregate_candidate
 from inferencefit.optimization import (
     apply_constraints,
@@ -53,9 +54,13 @@ async def benchmark(
     resume: str | None = None,
     output_root: str | Path = ".inferencefit/runs",
     run_id: str | None = None,
+    budget: BudgetController | None = None,
 ) -> ResultBundle:
     # The public package imports core before publishing its version.
     from inferencefit import __version__
+
+    if budget is not None and resume is not None:
+        raise ValueError("Budget-controlled runs do not support resume")
 
     loaded = load_evaluation_spec(spec_path)
     spec = loaded.spec
@@ -131,6 +136,7 @@ async def benchmark(
             active_run_id,
             existing=existing,
             invocation_namespace=invocation_namespace,
+            budget=budget,
         )
     except asyncio.CancelledError:
         manifest.update(status="cancelled", completed_at=datetime.now(UTC).isoformat())
@@ -156,9 +162,16 @@ async def benchmark(
     all_summaries = [*candidate_summaries, *cascade_summaries]
     apply_constraints(all_summaries, constraints)
     ranking = rank_summaries(all_summaries, spec.optimization.objective)
+    if budget is not None and (budget.stopped or budget.failed or budget.uncertain):
+        ranking = []
     recommendation = ranking[0].id if ranking else None
     if recommendation is None:
-        reason = "No configuration satisfied all constraints and objective requirements."
+        if budget is not None and budget.stopped:
+            reason = "Budget exhausted before all planned requests completed."
+        elif budget is not None and (budget.failed or budget.uncertain):
+            reason = "Provider failures or uncertain costs prevent a demo recommendation."
+        else:
+            reason = "No configuration satisfied all constraints and objective requirements."
         policy = RoutingPolicy(strategy="none", reason=reason)
     else:
         chosen = ranking[0]
@@ -178,6 +191,7 @@ async def benchmark(
     result = ResultBundle(
         run_id=active_run_id,
         started_at=started,
+        status="failed" if budget is not None and budget.stopped else "completed",
         provenance={"spec_hash": spec_hash, "dataset_hash": dataset.sha256},
         constraints=constraints,
         candidate_summaries=candidate_summaries,
@@ -196,10 +210,20 @@ async def benchmark(
     )
     store._atomic_text(run_dir / "summary.md", render_markdown(result))
     manifest.update(
-        status="completed",
+        status="incomplete" if budget is not None and budget.stopped else "completed",
         completed_at=result.completed_at.isoformat(),
-        planned_observations=len(observations),
+        planned_observations=len(dataset) * len(spec.candidates) * spec.execution.repetitions,
     )
+    if budget is not None:
+        manifest["budget"] = {
+            "limit_usd": budget.limit_usd,
+            "reported_or_estimated_usd": budget.known_usd,
+            "uncertain_reservation_usd": budget.uncertain_usd,
+            "completed_requests": budget.completed,
+            "failed_requests": budget.failed,
+            "uncertain_requests": budget.uncertain,
+            "budget_exhausted": budget.stopped,
+        }
     store.atomic_json(run_dir / "manifest.json", manifest)
     logger.info("run completed", extra={"run_id": active_run_id})
     return result

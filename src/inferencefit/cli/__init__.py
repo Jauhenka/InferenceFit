@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Annotated
 
 import typer
 
+from inferencefit import demo as demo_module
 from inferencefit.agent_skill import canonical_skill_path
 from inferencefit.core import benchmark as run_benchmark
 from inferencefit.credentials import EnvironmentCredentialResolver
 from inferencefit.errors import MissingCredentialError
+from inferencefit.execution.budget import BudgetController
 from inferencefit.presets import UnknownPresetError, list_presets
 from inferencefit.presets.project import PresetDestinationError, initialize_project
 from inferencefit.providers import ProviderError
@@ -154,6 +158,99 @@ def init_command(
     typer.echo("Replace the fixture candidate with the models you actually want to evaluate.")
     typer.echo("Next:")
     typer.echo(f"  inferencefit benchmark {target / 'eval.yaml'}")
+
+
+def _interactive() -> bool:
+    return sys.stdin.isatty()
+
+
+@app.command("demo")
+def demo_command(
+    live: bool = typer.Option(False, "--live", help="Run the live provider comparison."),
+    yes: bool = typer.Option(False, "--yes", help="Explicitly consent to provider requests."),
+    budget: float | None = typer.Option(None, "--budget", help="USD budget (default: 0.25)."),
+) -> None:
+    """Run a small, explicitly authorized live comparison."""
+    if not live:
+        typer.echo("Offline: no requests made. Use --live to plan a live comparison.")
+        return
+    if not _interactive() and (not yes or budget is None):
+        typer.echo("Non-interactive use requires --yes and an explicit --budget.", err=True)
+        raise typer.Exit(2)
+    try:
+        controller = BudgetController(0.25 if budget is None else budget)
+        candidates, workload, estimate = demo_module.plan(controller)
+    except ValueError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(2) from None
+    typer.echo("InferenceFit Live Demo")
+    for candidate in candidates:
+        pricing = candidate.pricing
+        typer.echo(
+            f"  {candidate.provider}: {candidate.model} "
+            f"(snapshot USD/M tokens: input {pricing.input_per_million}, "
+            f"output {pricing.output_per_million})"
+        )
+    typer.echo(f"Test cases: {len(workload)}; planned requests: {len(workload) * len(candidates)}")
+    typer.echo(f"Estimated reservation: ${estimate:.6f}; budget: ${controller.limit_usd:.2f}")
+    input_total = sum(controller.input_token_estimate(case) for case in workload) * len(candidates)
+    typer.echo(
+        f"Estimated input tokens: {input_total}; output token limit: "
+        f"{64 * len(workload) * len(candidates)} total."
+    )
+    typer.echo("Input estimate uses UTF-8 bytes plus framing; provider counts can differ.")
+    typer.echo("Price snapshots checked 2026-11-04; DeepSeek uses peak cache-miss rates.")
+    typer.echo("Estimates use padded snapshots and token heuristics, not a billing guarantee.")
+    typer.echo("Test prompts will be sent to the selected providers.")
+    if not yes and not typer.confirm("Proceed?", default=False):
+        typer.echo("Declined; no requests made.")
+        raise typer.Exit(0)
+    if controller.estimate(candidates[0], workload[0]) > controller.limit_usd:
+        typer.echo("Budget insufficient for the first request; no requests made.", err=True)
+        raise typer.Exit(2)
+    try:
+        with TemporaryDirectory(prefix="inferencefit-demo-") as directory:
+            spec = demo_module.write_spec(Path(directory), candidates, workload)
+            result = asyncio.run(run_benchmark(spec, budget=controller))
+    except (KeyboardInterrupt, Exception) as exc:
+        controller.interrupt()
+        typer.echo(f"Demo interrupted or failed ({type(exc).__name__}).", err=True)
+        typer.echo(
+            f"Reported/estimated cost: ${controller.known_usd:.6f}; "
+            f"uncertain reservation: ${controller.uncertain_usd:.6f}",
+            err=True,
+        )
+        raise typer.Exit(1) from None
+    typer.echo("Model | attempted | quality | reliability | p50 ms | estimated cost")
+    for summary in result.candidate_summaries:
+        latency = "unknown" if summary.p50_latency_ms is None else f"{summary.p50_latency_ms:.0f}"
+        cost = "unknown" if summary.total_cost_usd is None else f"${summary.total_cost_usd:.6f}"
+        typer.echo(
+            f"{summary.id} | {summary.planned_count}/{len(workload)} | "
+            f"{summary.validation_pass_count}/{len(workload)} | "
+            f"{summary.provider_success_count}/{summary.planned_count} | {latency} | {cost}"
+        )
+    typer.echo(
+        f"Requests completed: {controller.completed}; failures: {controller.failed}; "
+        f"uncertain: {controller.uncertain}"
+    )
+    typer.echo(
+        f"Reported/estimated cost: ${controller.known_usd:.6f}; "
+        f"uncertain reservation: ${controller.uncertain_usd:.6f}"
+    )
+    if controller.stopped or controller.failed or controller.uncertain:
+        typer.echo(
+            "Incomplete or uncertain results: no recommendation. Budget exhaustion: "
+            + str(controller.stopped)
+        )
+    else:
+        typer.echo(
+            f"Recommendation: {result.recommendation} "
+            "(balanced quality, cost, latency and reliability)."
+        )
+    typer.echo(f"Artifacts: .inferencefit/runs/{result.run_id}")
+    typer.echo("Small smoke test only; use more representative cases before selecting a model.")
+    typer.echo("Next: inferencefit init --preset structured-extraction ./eval")
 
 
 @app.command("validate")

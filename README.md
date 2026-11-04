@@ -1,20 +1,82 @@
 # InferenceFit
 
-InferenceFit is a local-first toolkit for evaluating and selecting LLM configurations for a
-specific workload. Instead of asking which model is universally "best," it runs your versioned
-test cases against candidate providers and models, measures quality, reliability, latency, token
-use, and cost, applies your hard constraints, and produces a deterministic recommendation and an
-open routing policy.
+**Stop guessing which LLM to use. Benchmark models on your actual workload.**
 
-InferenceFit 0.2.5 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
+InferenceFit compares quality, cost, latency, and reliability using reproducible evaluations.
+Run locally with your own API keys, test cases, and validators, then select a configuration using
+your constraints. It is open source, local-first, and usable by coding agents.
 
-## Installation
+InferenceFit 0.2.5 is a pre-1.0 release; public APIs and serialized schemas may change before 1.0.
 
-InferenceFit requires Python 3.11 or newer.
+## Install and run a first benchmark
+
+Python 3.11 or newer is required:
 
 ```bash
 pip install inferencefit
+inferencefit init --preset structured-extraction ./eval
+inferencefit benchmark ./eval/eval.yaml
 ```
+
+This first run is **offline**, using a fixture rather than a live model. It checks the evaluation
+pipeline without an API key or network access. For a real provider, configure a candidate and its
+current pricing in `eval/eval.yaml`; see [provider examples](#opt-in-provider-examples). Those
+requests can incur charges. The existing benchmark command does not impose a spending cap or ask
+for confirmation.
+
+## Live demo
+
+With both `FIREWORKS_API_KEY` and `DEEPSEEK_API_KEY` set in your environment, run:
+
+```bash
+inferencefit demo --live
+```
+
+The demo compares one previously tested model from each provider on four synthetic color-extraction
+cases. It displays the chosen models, request count, estimated reservation, and budget before asking
+for confirmation. It uses sequential requests, a 64-token output limit, and no retries. For explicit
+non-interactive consent, use `inferencefit demo --live --yes --budget 0.25`. Without `--live`, the
+command makes no requests. The demo requires both credentials; it never substitutes fixtures.
+
+The $0.25 default is a **client-side estimated budget**, not a provider billing limit. Estimates use
+historical pricing snapshots with a padded reservation and a byte-based input-token heuristic. The
+DeepSeek snapshot uses peak cache-miss rates, checked 2026-11-04; off-peak and cache-hit rates
+may be lower. Actual rates, tokenization, model availability, provider charges, and invoices can differ. Check current prices and your account
+limits before consenting. Check the [DeepSeek pricing page](https://api-docs.deepseek.com/quick_start/pricing/)
+and [Fireworks model catalog](https://fireworks.ai/models?modelTypes=LLM%2CServerless&show=serverless).
+Failed or timed-out requests can still be charged; their estimated
+reservation remains uncertain. No automatic retries are made. A four-case result is a smoke test,
+not a statistically reliable model ranking. Run artifacts are saved locally as with other benchmarks.
+
+To evaluate your own workload, start with `inferencefit init --preset structured-extraction ./eval`,
+then edit its dataset, validators, candidates and current prices before running
+`inferencefit benchmark ./eval/eval.yaml`. The ordinary benchmark command has no demo budget guard.
+
+## What a comparison looks like
+
+The following are **historical live results**, not output from the offline quickstart or current
+price quotes. These were separate runs of the same four synthetic extraction cases on 2026-09-21;
+one repetition is far too small to establish a reliable ranking. Cost was calculated from the
+configured snapshots, not provider invoices. Latency is the observed median.
+
+| Provider / model | Exact quality | Provider success | Median latency | Estimated cost for 4 requests |
+| --- | ---: | ---: | ---: | ---: |
+| Fireworks / nemotron-lightning-3p5-30b-a3b | 1/4 | 4/4 | 861 ms | $0.00004140 |
+| DeepSeek / deepseek-flash | 1/4 | 4/4 | 1,237 ms | $0.00013005 |
+
+No cross-provider recommendation was produced by those separate runs. The results illustrate why
+you should benchmark your own cases, use current pricing, and collect a larger sample before
+selecting a model. See the [full methodology and results](docs/e0.5-real-world-validation.md).
+
+## Privacy and security
+
+InferenceFit has no installation tracking, analytics, usage reporting, or automatic upload of
+benchmark results. Fixture benchmarks run locally without network access. Live benchmarks send
+prompts to the providers configured in the evaluation; the optional Cloud client contacts its
+explicitly configured service. Provider terms and retention policies apply. Run artifacts, including
+prompts and outputs, are stored locally under `.inferencefit/runs/`; protect and delete them as
+appropriate. Credentials should be supplied through environment variables, not specs or URLs.
+Local Python validators run with your process permissions: use only trusted code.
 
 ## Workload preset quick start
 
@@ -38,6 +100,13 @@ evaluate, then review validators, constraints, pricing, and execution limits. In
 overwrites an existing destination.
 
 ## Agent Skill
+
+An AI coding agent can initialize a preset, replace its sample cases with representative examples,
+configure candidate models and prices, run `inferencefit validate ./eval/eval.yaml` followed by
+`inferencefit benchmark ./eval/eval.yaml`, and inspect `result.json` and `summary.md` in the
+printed artifact directory. Review the dataset, validator, provider destination, and possible
+charges before running live candidates. Model selection is only as representative as the cases and
+constraints supplied.
 
 InferenceFit 0.2.5 also packages a portable Agent Skill for agents that prepare or interpret
 workload-specific evaluations. Locate it with:
@@ -306,6 +375,13 @@ run for backward compatibility, but that path is deprecated and warns since 0.2.
 configurations must use `provider: custom`. See the
 [generic example](examples/generic_openai_compatible/README.md) and
 [examples guide](examples/README.md).
+
+## CLI reference
+
+Run `inferencefit --help` or `inferencefit <command> --help` for the complete options. The main
+commands are `presets`, `init`, `validate`, `benchmark`, `skill path`, and `serve`. The optional
+`cloud` commands are described below. A benchmark writes its results locally and prints the run ID
+and artifact directory.
 
 ## Local daemon
 

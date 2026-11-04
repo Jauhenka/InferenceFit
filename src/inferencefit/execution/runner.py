@@ -19,6 +19,8 @@ from inferencefit.providers import ProviderAdapter, ProviderError
 from inferencefit.storage import FilesystemArtifactStore
 from inferencefit.validators import evaluate_validators
 
+from .budget import BudgetController
+
 logger = logging.getLogger(__name__)
 
 
@@ -127,6 +129,7 @@ async def run_evaluations(
     run_id: str,
     existing: list[Observation] | None = None,
     invocation_namespace: str | None = None,
+    budget: BudgetController | None = None,
 ) -> list[Observation]:
     namespace = invocation_namespace or secrets.token_hex(16)
     observations = list(existing or [])
@@ -137,6 +140,26 @@ async def run_evaluations(
             for repetition in range(spec.execution.repetitions):
                 if (case.id, candidate.id, repetition) not in completed:
                     queue.put_nowait((candidate, case, repetition))
+
+    if budget is not None:
+        if existing or spec.execution.retry.max_attempts != 1:
+            raise ValueError("Budget-controlled runs require no resume and exactly one attempt")
+        while not queue.empty():
+            candidate, case, repetition = queue.get_nowait()
+            amount = budget.estimate(candidate, case)
+            if not budget.reserve(amount):
+                break
+            try:
+                observation = await _execute(
+                    candidate, case, repetition, spec, provider_factory(candidate)
+                )
+                budget.settle(observation)
+                store.append_observation(run_id, observation)
+                observations.append(observation)
+            except BaseException:
+                budget.interrupt()
+                raise
+        return observations
 
     async def worker() -> None:
         while True:
