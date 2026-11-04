@@ -56,6 +56,18 @@ class CandidateSpec(BaseModel):
 
     @model_validator(mode="after")
     def _validate_endpoint(self) -> CandidateSpec:
+        if self.provider.lower() == "inferencefit-cloud":
+            if self.provider != "inferencefit-cloud":
+                raise ValueError("use canonical provider name inferencefit-cloud")
+            # The Cloud client uses a single trusted origin configured outside
+            # benchmark input, and derives customer charge from the remote
+            # settled status rather than local token pricing.
+            if self.base_url is not None:
+                raise ValueError("inferencefit-cloud provider does not accept base_url")
+            if self.pricing is not None:
+                raise ValueError("inferencefit-cloud provider does not accept pricing")
+            return self
+
         base_url = self.base_url
         if self.provider == "custom" and (base_url is None or not base_url.strip()):
             raise ValueError("custom provider requires base_url")

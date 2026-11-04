@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
+import secrets
 from collections.abc import Callable
 
 from inferencefit.contracts import (
@@ -16,6 +18,8 @@ from inferencefit.contracts.observations import ObservationError
 from inferencefit.providers import ProviderAdapter, ProviderError
 from inferencefit.storage import FilesystemArtifactStore
 from inferencefit.validators import evaluate_validators
+
+from .budget import BudgetController
 
 logger = logging.getLogger(__name__)
 
@@ -39,15 +43,20 @@ async def _execute(
     repetition: int,
     spec: EvaluationSpec,
     provider: ProviderAdapter,
+    invocation_id: str | None = None,
 ) -> Observation:
+    resolved_invocation_id = invocation_id or f"ifc-{secrets.token_hex(16)}"
     attempts = 0
     while True:
         attempts += 1
         try:
-            response = await asyncio.wait_for(
-                provider.complete(candidate, case, repetition),
-                timeout=spec.execution.timeout_ms / 1000,
+            aware_complete = getattr(provider, "complete_with_invocation", None)
+            completion = (
+                aware_complete(candidate, case, repetition, resolved_invocation_id)
+                if callable(aware_complete)
+                else provider.complete(candidate, case, repetition)
             )
+            response = await asyncio.wait_for(completion, timeout=spec.execution.timeout_ms / 1000)
             try:
                 parsed = json.loads(response.raw_output)
             except json.JSONDecodeError:
@@ -119,7 +128,10 @@ async def run_evaluations(
     store: FilesystemArtifactStore,
     run_id: str,
     existing: list[Observation] | None = None,
+    invocation_namespace: str | None = None,
+    budget: BudgetController | None = None,
 ) -> list[Observation]:
+    namespace = invocation_namespace or secrets.token_hex(16)
     observations = list(existing or [])
     completed = {item.identity for item in observations}
     queue: asyncio.Queue[tuple[CandidateSpec, TestCase, int]] = asyncio.Queue()
@@ -129,6 +141,26 @@ async def run_evaluations(
                 if (case.id, candidate.id, repetition) not in completed:
                     queue.put_nowait((candidate, case, repetition))
 
+    if budget is not None:
+        if existing or spec.execution.retry.max_attempts != 1:
+            raise ValueError("Budget-controlled runs require no resume and exactly one attempt")
+        while not queue.empty():
+            candidate, case, repetition = queue.get_nowait()
+            amount = budget.estimate(candidate, case)
+            if not budget.reserve(amount):
+                break
+            try:
+                observation = await _execute(
+                    candidate, case, repetition, spec, provider_factory(candidate)
+                )
+                budget.settle(observation)
+                store.append_observation(run_id, observation)
+                observations.append(observation)
+            except BaseException:
+                budget.interrupt()
+                raise
+        return observations
+
     async def worker() -> None:
         while True:
             try:
@@ -137,8 +169,12 @@ async def run_evaluations(
                 return
             try:
                 candidate, case, repetition = item
+                identity = json.dumps(
+                    [namespace, candidate.id, case.id, repetition], separators=(",", ":")
+                )
+                invocation_id = "ifc-" + hashlib.sha256(identity.encode()).hexdigest()
                 observation = await _execute(
-                    candidate, case, repetition, spec, provider_factory(candidate)
+                    candidate, case, repetition, spec, provider_factory(candidate), invocation_id
                 )
                 store.append_observation(run_id, observation)
                 observations.append(observation)

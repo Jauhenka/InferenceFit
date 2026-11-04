@@ -1,0 +1,1 @@
+{"id":"synthetic-alpha","request":{"messages":[{"role":"user","content":"Return JSON with label alpha for this synthetic example."}]},"expected":{"label":"alpha"}}

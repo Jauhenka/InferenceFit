@@ -12,6 +12,7 @@ from inferencefit.credentials import EnvironmentCredentialResolver
 from .anthropic import AnthropicProvider
 from .base import ProviderAdapter
 from .fixture import FixtureProvider
+from .inferencefit_cloud import InferenceFitCloudProvider
 from .openai_compatible import PRESET_URLS, OpenAICompatibleProvider
 from .openai_responses import OpenAIResponsesProvider
 from .openrouter import OpenRouterProvider
@@ -31,6 +32,11 @@ def create_provider(
 ) -> ProviderAdapter:
     if candidate.provider == "fixture":
         return FixtureProvider(spec_dir)
+    if candidate.provider.lower() == "inferencefit-cloud":
+        if candidate.provider != "inferencefit-cloud" or candidate.base_url is not None:
+            raise ValueError("invalid InferenceFit Cloud candidate")
+        credential = resolver.resolve(candidate.credential_ref, candidate.provider)
+        return InferenceFitCloudProvider(credential)
     credential = resolver.resolve(candidate.credential_ref, candidate.provider)
     if candidate.provider == "custom":
         return OpenAICompatibleProvider(credential)

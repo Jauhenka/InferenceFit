@@ -37,7 +37,7 @@ EXPECTED_PRESET_IDS = [
 ]
 
 # The only registered CLI sub-commands an agent may be told to run in the skill.
-KNOWN_CLI_SUBCOMMANDS = {"presets", "init", "validate", "benchmark", "serve", "skill"}
+KNOWN_CLI_SUBCOMMANDS = {"presets", "init", "validate", "benchmark", "serve", "skill", "cloud"}
 # Neutral words that legitimately follow the word "inferencefit" but are not commands.
 NON_COMMAND_FOLLOWERS = {
     "command",

@@ -1,20 +1,82 @@
 # InferenceFit
 
-InferenceFit is a local-first toolkit for evaluating and selecting LLM configurations for a
-specific workload. Instead of asking which model is universally "best," it runs your versioned
-test cases against candidate providers and models, measures quality, reliability, latency, token
-use, and cost, applies your hard constraints, and produces a deterministic recommendation and an
-open routing policy.
+**Stop guessing which LLM to use. Benchmark models on your actual workload.**
 
-InferenceFit 0.2.5 is a pre-1.0 release. Public APIs and serialized schemas may change before 1.0.
+InferenceFit compares quality, cost, latency, and reliability using reproducible evaluations.
+Run locally with your own API keys, test cases, and validators, then select a configuration using
+your constraints. It is open source, local-first, and usable by coding agents.
 
-## Installation
+InferenceFit 0.2.5 is a pre-1.0 release; public APIs and serialized schemas may change before 1.0.
 
-InferenceFit requires Python 3.11 or newer.
+## Install and run a first benchmark
+
+Python 3.11 or newer is required:
 
 ```bash
 pip install inferencefit
+inferencefit init --preset structured-extraction ./eval
+inferencefit benchmark ./eval/eval.yaml
 ```
+
+This first run is **offline**, using a fixture rather than a live model. It checks the evaluation
+pipeline without an API key or network access. For a real provider, configure a candidate and its
+current pricing in `eval/eval.yaml`; see [provider examples](#opt-in-provider-examples). Those
+requests can incur charges. The existing benchmark command does not impose a spending cap or ask
+for confirmation.
+
+## Live demo
+
+With both `FIREWORKS_API_KEY` and `DEEPSEEK_API_KEY` set in your environment, run:
+
+```bash
+inferencefit demo --live
+```
+
+The demo compares one previously tested model from each provider on four synthetic color-extraction
+cases. It displays the chosen models, request count, estimated reservation, and budget before asking
+for confirmation. It uses sequential requests, a 64-token output limit, and no retries. For explicit
+non-interactive consent, use `inferencefit demo --live --yes --budget 0.25`. Without `--live`, the
+command makes no requests. The demo requires both credentials; it never substitutes fixtures.
+
+The $0.25 default is a **client-side estimated budget**, not a provider billing limit. Estimates use
+historical pricing snapshots with a padded reservation and a byte-based input-token heuristic. The
+DeepSeek snapshot uses peak cache-miss rates, checked 2026-11-04; off-peak and cache-hit rates
+may be lower. Actual rates, tokenization, model availability, provider charges, and invoices can differ. Check current prices and your account
+limits before consenting. Check the [DeepSeek pricing page](https://api-docs.deepseek.com/quick_start/pricing/)
+and [Fireworks model catalog](https://fireworks.ai/models?modelTypes=LLM%2CServerless&show=serverless).
+Failed or timed-out requests can still be charged; their estimated
+reservation remains uncertain. No automatic retries are made. A four-case result is a smoke test,
+not a statistically reliable model ranking. Run artifacts are saved locally as with other benchmarks.
+
+To evaluate your own workload, start with `inferencefit init --preset structured-extraction ./eval`,
+then edit its dataset, validators, candidates and current prices before running
+`inferencefit benchmark ./eval/eval.yaml`. The ordinary benchmark command has no demo budget guard.
+
+## What a comparison looks like
+
+The following are **historical live results**, not output from the offline quickstart or current
+price quotes. These were separate runs of the same four synthetic extraction cases on 2026-09-21;
+one repetition is far too small to establish a reliable ranking. Cost was calculated from the
+configured snapshots, not provider invoices. Latency is the observed median.
+
+| Provider / model | Exact quality | Provider success | Median latency | Estimated cost for 4 requests |
+| --- | ---: | ---: | ---: | ---: |
+| Fireworks / nemotron-lightning-3p5-30b-a3b | 1/4 | 4/4 | 861 ms | $0.00004140 |
+| DeepSeek / deepseek-flash | 1/4 | 4/4 | 1,237 ms | $0.00013005 |
+
+No cross-provider recommendation was produced by those separate runs. The results illustrate why
+you should benchmark your own cases, use current pricing, and collect a larger sample before
+selecting a model. See the [full methodology and results](docs/e0.5-real-world-validation.md).
+
+## Privacy and security
+
+InferenceFit has no installation tracking, analytics, usage reporting, or automatic upload of
+benchmark results. Fixture benchmarks run locally without network access. Live benchmarks send
+prompts to the providers configured in the evaluation; the optional Cloud client contacts its
+explicitly configured service. Provider terms and retention policies apply. Run artifacts, including
+prompts and outputs, are stored locally under `.inferencefit/runs/`; protect and delete them as
+appropriate. Credentials should be supplied through environment variables, not specs or URLs.
+Local Python validators run with your process permissions: use only trusted code.
 
 ## Workload preset quick start
 
@@ -38,6 +100,13 @@ evaluate, then review validators, constraints, pricing, and execution limits. In
 overwrites an existing destination.
 
 ## Agent Skill
+
+An AI coding agent can initialize a preset, replace its sample cases with representative examples,
+configure candidate models and prices, run `inferencefit validate ./eval/eval.yaml` followed by
+`inferencefit benchmark ./eval/eval.yaml`, and inspect `result.json` and `summary.md` in the
+printed artifact directory. Review the dataset, validator, provider destination, and possible
+charges before running live candidates. Model selection is only as representative as the cases and
+constraints supplied.
 
 InferenceFit 0.2.5 also packages a portable Agent Skill for agents that prepare or interpret
 workload-specific evaluations. Locate it with:
@@ -307,6 +376,13 @@ configurations must use `provider: custom`. See the
 [generic example](examples/generic_openai_compatible/README.md) and
 [examples guide](examples/README.md).
 
+## CLI reference
+
+Run `inferencefit --help` or `inferencefit <command> --help` for the complete options. The main
+commands are `presets`, `init`, `validate`, `benchmark`, `skill path`, and `serve`. The optional
+`cloud` commands are described below. A benchmark writes its results locally and prints the run ID
+and artifact directory.
+
 ## Local daemon
 
 ```bash
@@ -317,6 +393,23 @@ The daemon defaults to `127.0.0.1:8787` and exposes health, run creation, status
 cancellation endpoints. It has no authentication and is intended only for trusted localhost use;
 do not expose it to a network.
 
+## InferenceFit Cloud client (M2 development)
+
+The development branch adds `provider: inferencefit-cloud` to the ordinary benchmark workflow.
+Cloud candidates can be mixed with local fixtures and BYOK providers. Cloud requires a token
+issued by a separate, operator-managed InferenceFit Cloud service. Set `INFERENCEFIT_CLOUD_TOKEN`
+in the environment and use `inferencefit cloud status`, `cloud models`, and `cloud balance` to
+inspect connection, hosted IDs, and server-reported credits. No public account signup or payment
+flow is available. The client does not provide provider keys or run benchmarks remotely.
+
+The Cloud endpoint is configured outside evaluation YAML. For local development, set
+`INFERENCEFIT_CLOUD_API_URL=http://127.0.0.1:8000`. For an authorized remote HTTPS service,
+also set `INFERENCEFIT_CLOUD_TRUSTED_ORIGIN` to that exact origin; this deliberately trusts the
+operator with the token and workload data. Candidate-level `base_url` is rejected for Cloud.
+No production Cloud origin is assumed until the service owner confirms one. See the
+[mixed synthetic example](examples/cloud_mixed/README.md). Obtain user approval before sending
+sensitive data or consuming Cloud credits. A quote is not a guaranteed spending cap.
+
 ## Current limitations
 
 Version 0.2.5 uses a local process job manager and filesystem artifact store. It supports
@@ -324,8 +417,9 @@ non-streaming chat completions, OpenAI Responses text output, and Anthropic Mess
 a single two-stage fallback,
 and Python only. Cost uses reported request cost where available, then static configured prices;
 it is not an invoice reconciliation system. Exact validators intentionally do not provide
-semantic-equivalence scoring. There is no hosted Cloud/SaaS service, account system, traffic proxy,
-browser UI, distributed worker system, learned routing, or model training.
+semantic-equivalence scoring. The public package has no hosted Cloud backend or account system;
+those live in a separate service. There is no browser UI, distributed worker system, learned
+routing, or model training.
 
 ## Roadmap (not available in 0.2.5)
 

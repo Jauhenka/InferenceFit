@@ -1,0 +1,18 @@
+schema_version: '0.1'
+dataset: {path: cases.jsonl}
+candidates:
+  - id: offline-baseline
+    provider: fixture
+    model: synthetic-baseline
+    parameters: {fixture_path: fixtures/baseline.jsonl}
+  - id: hosted-candidate
+    provider: inferencefit-cloud
+    model: REPLACE-WITH-CLOUD-CATALOG-ID
+    parameters: {max_tokens: 64, temperature: 0}
+validators:
+  - {id: label, type: exact, target: /label, reference: /label}
+execution:
+  concurrency: 2
+  repetitions: 1
+  retry: {max_attempts: 1}
+optimization: {objective: balanced}

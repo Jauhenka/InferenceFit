@@ -34,6 +34,12 @@ run proves the evaluation plumbing; it does not recommend a model.
    For a multi-workspace key, set `ANTHROPIC_WORKSPACE_ID` so the native request includes
    `anthropic-workspace-id`. Inspect `observations.jsonl` for returned `raw_response`,
    `usage_details`, and optional reasoning data; never infer hidden reasoning when absent.
+   InferenceFit Cloud is an optional first-class provider for catalog models when the user has
+   an operator-provisioned account. M2 uses `INFERENCEFIT_CLOUD_TOKEN` or an opaque
+   `credential_ref`; there is no browser signup, `cloud login`, or `cloud topup` yet. Use
+   `inferencefit cloud status`, `cloud models`, and `cloud balance` to inspect the connection.
+   Cloud candidates can share the normal evaluation with local/BYOK candidates. Never put a
+   token or Cloud endpoint in evaluation YAML, and never infer hosted model IDs or prices.
 4. Select validators from trustworthy evidence. Read
    [validator selection](references/validators.md) before using approximate checks or custom code.
 5. Check required credential presence by documented variable name or opaque `credential_ref`.
@@ -43,6 +49,9 @@ run proves the evaluation plumbing; it does not recommend a model.
    repetition with bounded output. Ask before running when cost is unknown, inputs are large, or
    the run exceeds this exploratory envelope. A cost constraint filters results after requests;
    it is not a spending cap.
+   For Cloud, obtain explicit approval before sending sensitive workload data or spending trial
+   or paid credits, even inside that envelope. Check available balance and do not describe a
+   Cloud quote as an exact maximum. Offer Cloud only when it adds useful model coverage.
 7. Run `inferencefit validate <destination>/eval.yaml`, then
    `inferencefit benchmark <destination>/eval.yaml`. Keep the run offline when a fixture is enough
    to test plumbing.
